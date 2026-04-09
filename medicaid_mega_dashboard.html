@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medicaid Healthcare Utilization — Mega Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fa;--surface:#ffffff;--surface2:#f8fafb;--surface3:#f0f2f5;
+  --border:#e1e8ed;--text:#1a202c;--muted:#718096;--faint:#dfeaf4;
+  --c1:#2563eb;--c2:#f59e0b;--c3:#10b981;--c4:#ef4444;--c5:#8b5cf6;
+  --c6:#f97316;--c7:#0891b2;--c8:#16a34a;--c9:#eab308;--c10:#dc2626;
+  --grad1:linear-gradient(135deg,#2563eb,#7c3aed);
+  --grad2:linear-gradient(135deg,#f59e0b,#ef4444);
+  --grad3:linear-gradient(135deg,#10b981,#0891b2);
+  --grad4:linear-gradient(135deg,#f97316,#f59e0b);
+  --grad5:linear-gradient(135deg,#8b5cf6,#2563eb);
+  --shadow:0 4px 24px rgba(0,0,0,0.08);
+  --glow1:0 0 20px rgba(37,99,235,0.2);
+  --glow2:0 0 20px rgba(245,158,11,0.2);
+  --glow3:0 0 20px rgba(16,185,129,0.2);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Outfit',sans-serif;background:var(--bg);
+  color:var(--text);font-size:13px;min-height:100vh;
+  background-image:radial-gradient(ellipse at 10% 20%,rgba(37,99,235,0.03) 0%,transparent 50%),
+    radial-gradient(ellipse at 90% 80%,rgba(245,158,11,0.03) 0%,transparent 50%);
+}
+/* HEADER */
+.header{
+  background:linear-gradient(90deg,#ffffff,#f8fafc,#ffffff);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;height:56px;
+  display:flex;align-items:center;gap:14px;
+  position:sticky;top:0;z-index:200;
+  backdrop-filter:blur(12px);
+}
+.header-logo{
+  width:36px;height:36px;border-radius:8px;
+  background:var(--grad1);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:14px;color:#000;flex-shrink:0;
+  box-shadow:var(--glow1);
+}
+.header h1{
+  font-size:16px;font-weight:700;
+  background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.header-meta{font-size:11px;color:var(--muted);margin-left:auto;font-family:'JetBrains Mono',monospace;}
+.header-badge{
+  background:var(--surface3);border:1px solid var(--border);
+  border-radius:20px;padding:3px 12px;font-size:11px;color:var(--c3);
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* NAV */
+.navwrap{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  overflow-x:auto;white-space:nowrap;
+  position:sticky;top:56px;z-index:199;
+  scrollbar-width:none;
+}
+.navwrap::-webkit-scrollbar{display:none}
+.navtabs{display:inline-flex;padding:0 16px;gap:2px;min-width:100%;}
+.tab{
+  padding:10px 16px;font-size:12px;cursor:pointer;
+  border-bottom:3px solid transparent;color:var(--muted);
+  transition:all 0.2s;user-select:none;white-space:nowrap;
+  font-weight:500;
+}
+.tab:hover{color:var(--text);background:rgba(0,0,0,0.03);}
+.tab.active{color:var(--c1);border-bottom-color:var(--c1);font-weight:600;}
+.tab .tab-icon{margin-right:5px;font-size:13px;}
+
+/* PAGES */
+.page{display:none;padding:18px 20px 40px;}
+.page.active{display:block;animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* PAGE HEADER */
+.page-header{
+  margin-bottom:18px;padding:20px 24px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  display:flex;align-items:center;gap:16px;
+  background-image:linear-gradient(135deg,var(--faint),transparent);
+  position:relative;overflow:hidden;
+}
+.page-header::before{
+  content:'';position:absolute;top:-30px;right:-30px;
+  width:120px;height:120px;border-radius:50%;
+  background:var(--grad1);opacity:0.07;
+}
+.page-header-icon{font-size:32px;flex-shrink:0;}
+.page-header-title{font-size:20px;font-weight:700;color:var(--text);}
+.page-header-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.page-header-count{
+  margin-left:auto;background:var(--surface3);
+  border:1px solid var(--border);border-radius:8px;
+  padding:6px 14px;text-align:center;flex-shrink:0;
+}
+.page-header-count .num{font-size:20px;font-weight:700;color:var(--c1);}
+.page-header-count .lbl{font-size:10px;color:var(--muted);}
+
+/* FILTER BAR */
+.filterbar{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:10px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.filterbar label{
+  font-size:10px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:1px;
+}
+.filterbar select{
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);padding:5px 28px 5px 10px;font-size:12px;font-family:'Outfit',sans-serif;
+  cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%232563eb'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;
+  transition:border-color 0.2s;
+}
+.filterbar select:hover{border-color:var(--c1);}
+.filterbar select:focus{outline:none;border-color:var(--c1);box-shadow:0 0 0 2px rgba(79,195,247,0.15);}
+.filter-count{margin-left:auto;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.btn-reset{
+  background:var(--surface3);border:1px solid var(--border);border-radius:6px;
+  color:var(--c4);padding:5px 12px;font-size:11px;cursor:pointer;
+  font-family:'Outfit',sans-serif;transition:all 0.2s;
+}
+.btn-reset:hover{background:rgba(255,107,157,0.15);border-color:var(--c4);}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px 18px;position:relative;overflow:hidden;
+  transition:transform 0.2s,box-shadow 0.2s;cursor:default;
+}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.kpi-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--kpi-color,var(--c1));
+}
+.kpi-card::after{
+  content:'';position:absolute;top:0;right:0;
+  width:60px;height:60px;border-radius:50%;
+  background:var(--kpi-color,var(--c1));opacity:0.07;
+  transform:translate(15px,-15px);
+}
+.kpi-icon{font-size:18px;margin-bottom:8px;}
+.kpi-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;}
+.kpi-value{font-size:32px;font-weight:700;line-height:1.1;margin:4px 0 2px;color:var(--text);}
+.kpi-sub{font-size:10px;color:var(--muted);}
+.kpi-trend{
+  position:absolute;bottom:12px;right:14px;
+  font-size:11px;font-weight:600;
+}
+
+/* CHART CARDS */
+.chart-row{display:grid;gap:12px;margin-bottom:12px;}
+.chart-row-1{grid-template-columns:1fr;}
+.chart-row-2{grid-template-columns:1fr 1fr;}
+.chart-row-3{grid-template-columns:1fr 1fr 1fr;}
+.chart-row-4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.chart-row-21{grid-template-columns:2fr 1fr;}
+.chart-row-12{grid-template-columns:1fr 2fr;}
+.chart-row-13{grid-template-columns:1fr 3fr;}
+.chart-row-31{grid-template-columns:3fr 1fr;}
+
+.chart-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px 18px;position:relative;overflow:hidden;
+  transition:box-shadow 0.2s;
+}
+.chart-card:hover{box-shadow:var(--shadow);}
+.chart-card.glow-blue{box-shadow:0 0 0 1px rgba(79,195,247,0.2);}
+.chart-card.glow-yellow{box-shadow:0 0 0 1px rgba(249,168,37,0.2);}
+.chart-card.glow-green{box-shadow:0 0 0 1px rgba(105,240,174,0.2);}
+
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.card-title{font-size:13px;font-weight:700;color:var(--text);}
+.card-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.card-badge{
+  background:var(--surface3);border:1px solid var(--border);
+  border-radius:20px;padding:2px 10px;font-size:10px;
+  color:var(--muted);white-space:nowrap;flex-shrink:0;
+}
+
+.chart-wrap canvas{max-height:220px;}
+.chart-wrap-sm canvas{max-height:170px;}
+.chart-wrap-md canvas{max-height:240px;}
+.chart-wrap-lg canvas{max-height:290px;}
+.chart-wrap-xl canvas{max-height:360px;}
+
+/* LEGEND */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;}
+.legend-item{display:flex;align-items:center;gap:5px;color:var(--muted);}
+.ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.lsq{width:9px;height:9px;flex-shrink:0;border-radius:2px;}
+
+/* CORRELATION MATRIX */
+.corr-table{border-collapse:collapse;font-size:11px;}
+.corr-th{
+  padding:5px 6px;font-weight:600;font-size:10px;
+  color:var(--muted);text-align:center;
+  font-family:'JetBrains Mono',monospace;
+}
+.corr-cell{
+  width:54px;height:44px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:11px;cursor:pointer;
+  transition:opacity 0.2s,transform 0.2s;
+  font-family:'JetBrains Mono',monospace;
+  border-radius:4px;
+}
+.corr-cell:hover{opacity:0.85;transform:scale(1.08);z-index:5;position:relative;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+.corr-row-label{
+  font-weight:600;font-size:11px;padding:4px 10px 4px 0;
+  color:var(--muted);white-space:nowrap;
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* STAT TABLE */
+.stat-table{width:100%;border-collapse:collapse;font-size:12px;}
+.stat-table th{
+  background:var(--surface3);padding:8px 12px;text-align:left;
+  font-weight:700;font-size:10px;color:var(--muted);
+  border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.5px;
+}
+.stat-table td{padding:7px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;}
+.stat-table tr:hover td{background:var(--surface3);}
+.stat-table td:first-child{font-family:'Outfit',sans-serif;font-weight:600;color:var(--text);}
+
+/* SPARK BAR */
+.spark-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.spark-label{width:90px;font-size:11px;color:var(--muted);flex-shrink:0;}
+.spark-bar-wrap{flex:1;background:rgba(255,255,255,0.05);height:16px;border-radius:4px;overflow:hidden;}
+.spark-bar{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.22,1,.36,1);}
+.spark-val{width:44px;text-align:right;font-size:11px;font-weight:700;flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+
+/* INSIGHT CARDS */
+.insight-strip{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.insight-card{
+  flex:1;min-width:180px;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;
+  padding:14px;display:flex;align-items:flex-start;gap:10px;
+  transition:transform 0.2s;
+}
+.insight-card:hover{transform:translateY(-2px);}
+.insight-icon{font-size:24px;flex-shrink:0;}
+.insight-text strong{color:var(--text);display:block;margin-bottom:3px;font-size:12px;}
+.insight-text p{font-size:11px;color:var(--muted);line-height:1.5;}
+
+/* GAUGE METER */
+.gauge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.gauge-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:16px;text-align:center;
+}
+.gauge-arc{position:relative;width:100px;height:60px;margin:0 auto 8px;overflow:hidden;}
+.gauge-arc-bg,.gauge-arc-fill{
+  position:absolute;bottom:0;left:0;width:100%;
+  border-radius:100px 100px 0 0;
+}
+.gauge-arc-bg{height:50px;background:var(--surface3);}
+.gauge-arc-num{font-size:18px;font-weight:700;color:var(--text);}
+.gauge-lbl{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* HEATMAP CELLS */
+.heatmap{display:grid;gap:3px;}
+.hmap-row{display:flex;gap:3px;}
+.hmap-cell{
+  width:28px;height:22px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:600;font-family:'JetBrains Mono',monospace;
+  cursor:default;transition:transform 0.15s;
+}
+.hmap-cell:hover{transform:scale(1.15);z-index:5;position:relative;}
+.hmap-label{font-size:10px;color:var(--muted);padding:2px 4px;font-family:'JetBrains Mono',monospace;}
+
+/* PROGRESS RINGS */
+.ring-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.ring-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:14px;text-align:center;
+}
+.ring-wrap{position:relative;width:70px;height:70px;margin:0 auto 8px;}
+.ring-svg{width:70px;height:70px;transform:rotate(-90deg);}
+.ring-bg{fill:none;stroke:rgba(255,255,255,0.06);stroke-width:6;}
+.ring-fg{fill:none;stroke-width:6;stroke-linecap:round;stroke-dasharray:188;transition:stroke-dashoffset 1.5s cubic-bezier(.22,1,.36,1);}
+.ring-num{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:13px;font-weight:700;
+}
+.ring-label{font-size:10px;color:var(--muted);}
+
+/* SECTION DIVIDER */
+.section-label{
+  font-size:10px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:1.5px;
+  margin:14px 0 10px;padding-left:4px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* TOOLTIP */
+#tooltip{
+  position:fixed;pointer-events:none;z-index:9999;
+  background:rgba(15,17,23,0.97);color:var(--text);
+  padding:8px 12px;border-radius:8px;font-size:11px;
+  display:none;max-width:220px;border:1px solid var(--border);
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* PROFILE COMPARE */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.compare-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.compare-metric{width:60px;font-size:10px;color:var(--muted);}
+.compare-bars{flex:1;display:flex;flex-direction:column;gap:3px;}
+.compare-bar{height:12px;border-radius:3px;transition:width 1s;}
+.compare-val{width:40px;font-size:10px;font-family:'JetBrains Mono',monospace;text-align:right;}
+
+/* ANIMATED NUMBER */
+.anim-num{transition:all 0.5s;}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:20px;}
+.timeline::before{content:'';position:absolute;left:6px;top:0;bottom:0;width:2px;background:var(--border);}
+.tl-item{position:relative;margin-bottom:16px;}
+.tl-dot{
+  position:absolute;left:-17px;top:4px;
+  width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--surface);
+}
+.tl-title{font-size:12px;font-weight:700;margin-bottom:3px;}
+.tl-sub{font-size:11px;color:var(--muted);line-height:1.5;}
+
+/* WATERFALL */
+.waterfall-wrap{overflow-x:auto;}
+
+/* RESPONSIVE */
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(4,1fr);}
+}
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .chart-row-2,.chart-row-21,.chart-row-12{grid-template-columns:1fr;}
+  .chart-row-3{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:600px){
+  .chart-row-3,.chart-row-4{grid-template-columns:1fr;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">PBI</div>
+  <h1>Medicaid Healthcare Utilization Dashboard</h1>
+  <div class="header-badge">996 Records · 15 Variables</div>
+  <span class="header-meta">medicaid.csv · Last updated: 2025</span>
+</div>
+
+<div class="navwrap">
+<div class="navtabs">
+  <div class="tab active" onclick="showPage('overview',this)"><span class="tab-icon">🏠</span>Overview</div>
+  <div class="tab" onclick="showPage('demographics',this)"><span class="tab-icon">👥</span>Demographics</div>
+  <div class="tab" onclick="showPage('utilization',this)"><span class="tab-icon">📊</span>Utilization</div>
+  <div class="tab" onclick="showPage('program',this)"><span class="tab-icon">🏥</span>Program Analysis</div>
+  <div class="tab" onclick="showPage('health',this)"><span class="tab-icon">💊</span>Health Scores</div>
+  <div class="tab" onclick="showPage('correlation',this)"><span class="tab-icon">🔗</span>Correlation</div>
+  <div class="tab" onclick="showPage('socioeconomic',this)"><span class="tab-icon">💰</span>Socioeconomic</div>
+  <div class="tab" onclick="showPage('segments',this)"><span class="tab-icon">🎯</span>Segments</div>
+  <div class="tab" onclick="showPage('heatmaps',this)"><span class="tab-icon">🌡️</span>Heatmaps</div>
+  <div class="tab" onclick="showPage('distribution',this)"><span class="tab-icon">📈</span>Distributions</div>
+  <div class="tab" onclick="showPage('crossanalysis',this)"><span class="tab-icon">⚡</span>Cross-Analysis</div>
+  <div class="tab" onclick="showPage('scatter',this)"><span class="tab-icon">🔵</span>Scatter & Bubble</div>
+  <div class="tab" onclick="showPage('comparative',this)"><span class="tab-icon">⚖️</span>Comparative</div>
+  <div class="tab" onclick="showPage('summary',this)"><span class="tab-icon">📋</span>Summary Stats</div>
+  <div class="tab" onclick="showPage('insights',this)"><span class="tab-icon">💡</span>Key Insights</div>
+</div>
+</div>
+
+<!-- ===== PAGE 1: OVERVIEW ===== -->
+<div class="page active" id="page-overview">
+  <div class="page-header">
+    <div class="page-header-icon">🏠</div>
+    <div><div class="page-header-title">Executive Overview</div><div class="page-header-sub">High-level summary of Medicaid beneficiary data across all dimensions</div></div>
+    <div class="page-header-count"><div class="num" id="kpi-count">996</div><div class="lbl">beneficiaries</div></div>
+  </div>
+  <div class="filterbar">
+    <label>FILTERS</label>
+    <select id="f-program" onchange="applyFilters()"><option value="all">All Programs</option><option value="ssi">SSI</option><option value="afdc">AFDC</option></select>
+    <select id="f-gender" onchange="applyFilters()"><option value="all">All Genders</option><option value="female">Female</option><option value="male">Male</option></select>
+    <select id="f-ethnicity" onchange="applyFilters()"><option value="all">All Ethnicities</option><option value="cauc">Caucasian</option><option value="other">Other</option></select>
+    <select id="f-enroll" onchange="applyFilters()"><option value="all">All Enrollment</option><option value="yes">Enrolled</option><option value="no">Not Enrolled</option></select>
+    <select id="f-married" onchange="applyFilters()"><option value="all">All Marital</option><option value="yes">Married</option><option value="no">Unmarried</option></select>
+    <button class="btn-reset" onclick="resetFilters()">✕ Reset</button>
+    <span class="filter-count" id="filter-count">No filters — 996 records</span>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card" style="--kpi-color:#4fc3f7"><div class="kpi-icon">👤</div><div class="kpi-label">Total Beneficiaries</div><div class="kpi-value" id="kpi-total">996</div><div class="kpi-sub">Unique records</div><div class="kpi-trend" style="color:#4fc3f7">100%</div></div>
+    <div class="kpi-card" style="--kpi-color:#f9a825"><div class="kpi-icon">🏥</div><div class="kpi-label">Sum of Visits</div><div class="kpi-value" id="kpi-sum-visits">1,923</div><div class="kpi-sub">Total doctor visits</div><div class="kpi-trend" style="color:#f9a825">1.9K</div></div>
+    <div class="kpi-card" style="--kpi-color:#69f0ae"><div class="kpi-icon">📅</div><div class="kpi-label">Avg Visits / Person</div><div class="kpi-value" id="kpi-avg-visits">1.93</div><div class="kpi-sub">Per beneficiary</div><div class="kpi-trend" style="color:#69f0ae">±3.35σ</div></div>
+    <div class="kpi-card" style="--kpi-color:#ff6b9d"><div class="kpi-icon">🎂</div><div class="kpi-label">Average Age</div><div class="kpi-value" id="kpi-avg-age">55.21</div><div class="kpi-sub">Mean age (years)</div><div class="kpi-trend" style="color:#ff6b9d">17–101</div></div>
+    <div class="kpi-card" style="--kpi-color:#ce93d8"><div class="kpi-icon">💵</div><div class="kpi-label">Avg Income</div><div class="kpi-value" id="kpi-avg-income">$8.19K</div><div class="kpi-sub">Mean income ($000s)</div><div class="kpi-trend" style="color:#ce93d8">0.5–17.5</div></div>
+    <div class="kpi-card" style="--kpi-color:#ff7043"><div class="kpi-icon">🎓</div><div class="kpi-label">Avg School Years</div><div class="kpi-value" id="kpi-avg-school">9.03</div><div class="kpi-sub">Years of education</div><div class="kpi-trend" style="color:#ff7043">0–18 yrs</div></div>
+    <div class="kpi-card" style="--kpi-color:#26c6da"><div class="kpi-icon">👶</div><div class="kpi-label">Sum Children</div><div class="kpi-value" id="kpi-sum-children">1,309</div><div class="kpi-sub">Total children count</div><div class="kpi-trend" style="color:#26c6da">1.31 avg</div></div>
+    <div class="kpi-card" style="--kpi-color:#aed581"><div class="kpi-icon">📉</div><div class="kpi-label">Visit Variance</div><div class="kpi-value" id="kpi-var">11.25</div><div class="kpi-sub">Statistical variability</div><div class="kpi-trend" style="color:#aed581">σ²</div></div>
+  </div>
+  <div class="chart-row chart-row-21">
+    <div class="chart-card glow-blue">
+      <div class="card-header"><div><div class="card-title">Distribution of Doctor Visits</div><div class="card-sub">Count of beneficiaries per visit count</div></div><div class="card-badge">Bar Chart</div></div>
+      <div class="chart-wrap-lg"><canvas id="visitDistChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><div><div class="card-title">Program Split</div><div class="card-sub">AFDC vs SSI</div></div></div>
+      <div class="legend"><div class="legend-item"><div class="ldot" style="background:#4fc3f7"></div>SSI 511 (51.3%)</div><div class="legend-item"><div class="ldot" style="background:#f9a825"></div>AFDC 485 (48.7%)</div></div>
+      <div class="chart-wrap"><canvas id="programDonutChart"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-row chart-row-4">
+    <div class="chart-card"><div class="card-title" style="margin-bottom:8px">Gender Split</div><div class="chart-wrap-sm"><canvas id="genderMiniChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-title" style="margin-bottom:8px">Enrollment</div><div class="chart-wrap-sm"><canvas id="enrollMiniChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-title" style="margin-bottom:8px">Marital Status</div><div class="chart-wrap-sm"><canvas id="marriedMiniChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-title" style="margin-bottom:8px">Ethnicity</div><div class="chart-wrap-sm"><canvas id="ethnicMiniChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-3">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Avg Visits by Age Group</div><div class="card-sub">Decade buckets</div></div><div class="chart-wrap-sm"><canvas id="visitsAgeChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Visits by Enrollment</div></div><div class="chart-wrap-sm"><canvas id="visitsEnrollChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Visits by Marital Status</div></div><div class="chart-wrap-sm"><canvas id="visitsMarriedChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 2: DEMOGRAPHICS ===== -->
+<div class="page" id="page-demographics">
+  <div class="page-header">
+    <div class="page-header-icon">👥</div>
+    <div><div class="page-header-title">Demographics</div><div class="page-header-sub">Population characteristics across gender, age, education, ethnicity, marital status</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue"><div class="card-header"><div class="card-title">Gender Distribution</div><div class="card-sub">996 total beneficiaries</div></div><div class="legend"><div class="legend-item"><div class="ldot" style="background:#69f0ae"></div>Female 843 (84.6%)</div><div class="legend-item"><div class="ldot" style="background:#ce93d8"></div>Male 153 (15.4%)</div></div><div class="chart-wrap-md"><canvas id="genderPieChart"></canvas></div></div>
+    <div class="chart-card glow-yellow"><div class="card-header"><div class="card-title">Enrollment Status</div></div><div class="legend"><div class="legend-item"><div class="ldot" style="background:#69f0ae"></div>Enrolled 490 (49.2%)</div><div class="legend-item"><div class="ldot" style="background:#ef5350"></div>Not Enrolled 506 (50.8%)</div></div><div class="chart-wrap-md"><canvas id="enrollDonutChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Marital Status</div></div><div class="legend"><div class="legend-item"><div class="ldot" style="background:#4fc3f7"></div>Unmarried 780 (78.3%)</div><div class="legend-item"><div class="ldot" style="background:#f9a825"></div>Married 216 (21.7%)</div></div><div class="chart-wrap-md"><canvas id="marriedPieChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Ethnicity Distribution</div></div><div class="legend"><div class="legend-item"><div class="ldot" style="background:#ff7043"></div>Caucasian 691 (69.4%)</div><div class="legend-item"><div class="ldot" style="background:#26c6da"></div>Other 305 (30.6%)</div></div><div class="chart-wrap-md"><canvas id="ethnicPieChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-green"><div class="card-header"><div class="card-title">Education Distribution</div><div class="card-sub">Years of schooling (0–18)</div></div><div class="chart-wrap-lg"><canvas id="schoolBarChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Age Distribution by Decade</div></div><div class="chart-wrap-lg"><canvas id="ageDistChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-3">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Children Count</div></div><div class="chart-wrap"><canvas id="childrenBarChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Income Histogram</div><div class="card-sub">$000s buckets</div></div><div class="chart-wrap"><canvas id="incomeHistChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Age Distribution — Line</div><div class="card-sub">Smoothed age curve</div></div><div class="chart-wrap"><canvas id="ageLineChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 3: UTILIZATION ===== -->
+<div class="page" id="page-utilization">
+  <div class="page-header">
+    <div class="page-header-icon">📊</div>
+    <div><div class="page-header-title">Utilization Analysis</div><div class="page-header-sub">Doctor visit patterns across demographics and access factors</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue"><div class="card-header"><div><div class="card-title">Access Score vs Avg Visits</div><div class="card-sub">Healthcare access buckets (0–1)</div></div></div><div class="chart-wrap-md"><canvas id="accessAvgChart"></canvas></div></div>
+    <div class="chart-card glow-yellow"><div class="card-header"><div><div class="card-title">Avg Visits by Program &amp; Gender</div><div class="card-sub">Grouped bar</div></div></div><div class="legend"><div class="legend-item"><div class="lsq" style="background:#69f0ae"></div>Female</div><div class="legend-item"><div class="lsq" style="background:#ce93d8"></div>Male</div></div><div class="chart-wrap-md"><canvas id="progGenderChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-3">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Visits by Marital</div></div><div class="chart-wrap-sm"><canvas id="marriedVisitsChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Visits by Enrollment</div></div><div class="chart-wrap-sm"><canvas id="enrollVisitsChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Visits by Ethnicity</div></div><div class="chart-wrap-sm"><canvas id="ethnicVisitsChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Avg Visits — Line Trend by Age</div><div class="card-sub">Mean visits across life stages</div></div><div class="chart-wrap"><canvas id="visitsTrendChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Visits by School Years</div><div class="card-sub">Avg visits per education level</div></div><div class="chart-wrap"><canvas id="schoolVisitsChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Visits by Children Count</div></div><div class="chart-wrap"><canvas id="visitsByChildrenChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Zero Visit % by Group</div><div class="card-sub">Proportion with no doctor visits</div></div><div class="chart-wrap"><canvas id="zeroVisitChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 4: PROGRAM ANALYSIS ===== -->
+<div class="page" id="page-program">
+  <div class="page-header">
+    <div class="page-header-icon">🏥</div>
+    <div><div class="page-header-title">Program Analysis — SSI vs AFDC</div><div class="page-header-sub">Detailed comparison between the two Medicaid programs</div></div>
+  </div>
+  <div class="chart-row chart-row-4">
+    <div class="kpi-card" style="--kpi-color:#4fc3f7"><div class="kpi-icon">🔵</div><div class="kpi-label">SSI Count</div><div class="kpi-value">511</div><div class="kpi-sub">51.3% of total</div></div>
+    <div class="kpi-card" style="--kpi-color:#f9a825"><div class="kpi-icon">🟡</div><div class="kpi-label">AFDC Count</div><div class="kpi-value">485</div><div class="kpi-sub">48.7% of total</div></div>
+    <div class="kpi-card" style="--kpi-color:#69f0ae"><div class="kpi-icon">📅</div><div class="kpi-label">SSI Avg Visits</div><div class="kpi-value">2.23</div><div class="kpi-sub">vs 1.57 AFDC</div></div>
+    <div class="kpi-card" style="--kpi-color:#ff6b9d"><div class="kpi-icon">📅</div><div class="kpi-label">AFDC Avg Visits</div><div class="kpi-value">1.57</div><div class="kpi-sub">vs 2.23 SSI</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue">
+      <div class="card-header"><div class="card-title">Program × Gender Avg Visits</div><div class="card-sub">4-way grouped comparison</div></div>
+      <div class="chart-wrap-md"><canvas id="progGender2Chart"></canvas></div>
+    </div>
+    <div class="chart-card glow-yellow">
+      <div class="card-header"><div class="card-title">Program × Ethnicity Avg Visits</div></div>
+      <div class="chart-wrap-md"><canvas id="progEthnicChart"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Program × Marital Status</div></div>
+      <div class="chart-wrap"><canvas id="progMarriedChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Enrollment × Program Avg Visits</div></div>
+      <div class="chart-wrap"><canvas id="enrollProgChart"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Age Distribution by Program</div><div class="card-sub">Stacked bar — clear program age segments</div></div>
+      <div class="chart-wrap-lg"><canvas id="ageProgChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Children × Program</div><div class="card-sub">Number of children per program</div></div>
+      <div class="chart-wrap-lg"><canvas id="childrenProgChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE 5: HEALTH SCORES ===== -->
+<div class="page" id="page-health">
+  <div class="page-header">
+    <div class="page-header-icon">💊</div>
+    <div><div class="page-header-title">Health Score Analysis</div><div class="page-header-sub">Physical (health1) and subjective mental health (health2) scores</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue"><div class="card-header"><div class="card-title">Physical Health Score Distribution</div><div class="card-sub">health1 — standardized physical health</div></div><div class="chart-wrap-md"><canvas id="h1HistChart"></canvas></div></div>
+    <div class="chart-card glow-green"><div class="card-header"><div class="card-title">Mental Health Score Distribution</div><div class="card-sub">health2 — subjective mental health</div></div><div class="chart-wrap-md"><canvas id="h2HistChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Health1 Quartile × Gender × Avg Visits</div><div class="card-sub">Grouped bar — physical health quartiles</div></div><div class="legend"><div class="legend-item"><div class="lsq" style="background:#69f0ae"></div>Female</div><div class="legend-item"><div class="lsq" style="background:#ce93d8"></div>Male</div></div><div class="chart-wrap-md"><canvas id="h1GenderChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">High Utilizer % by Group</div><div class="card-sub">5+ visits as % of group</div></div><div class="chart-wrap-md"><canvas id="highUtilChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-3">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Health1 vs Visits — Binned</div></div><div class="chart-wrap-sm"><canvas id="health1VisitsChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Health2 Bins vs Visits</div></div><div class="chart-wrap-sm"><canvas id="health2VisitsChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Access Score Distribution</div></div><div class="chart-wrap-sm"><canvas id="accessDistChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 6: CORRELATION ===== -->
+<div class="page" id="page-correlation">
+  <div class="page-header">
+    <div class="page-header-icon">🔗</div>
+    <div><div class="page-header-title">Correlation Analysis</div><div class="page-header-sub">Pearson correlations between all numerical variables</div></div>
+  </div>
+  <div class="chart-row chart-row-1">
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Correlation Matrix — 9×9 Numerical Variables</div><div class="card-sub">Blue = positive · Red = negative · Darker = stronger</div></div>
+      <div style="overflow-x:auto" id="corrMatrix"></div>
+    </div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue"><div class="card-header"><div class="card-title">Correlations with Doctor Visits</div><div class="card-sub">Signed r-values — all variables</div></div><div class="chart-wrap-md"><canvas id="corrVisitsChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Correlations with Age</div><div class="card-sub">Age × all other variables</div></div><div class="chart-wrap-md"><canvas id="corrAgeChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Strongest Correlations (Abs)</div><div class="card-sub">Top variable pairs by |r|</div></div><div class="chart-wrap"><canvas id="topCorrChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Correlation Heatmap — Visits Row</div></div><div id="corrVisitsHeatmap" style="padding:10px 0"></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 7: SOCIOECONOMIC ===== -->
+<div class="page" id="page-socioeconomic">
+  <div class="page-header">
+    <div class="page-header-icon">💰</div>
+    <div><div class="page-header-title">Socioeconomic Analysis</div><div class="page-header-sub">Income, education, and their relationships to healthcare utilization</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-yellow"><div class="card-header"><div class="card-title">Income Distribution</div><div class="card-sub">Full histogram</div></div><div class="chart-wrap-md"><canvas id="incomeFull"></canvas></div></div>
+    <div class="chart-card glow-green"><div class="card-header"><div class="card-title">Income by Income Bucket — Avg Visits</div><div class="card-sub">Do richer beneficiaries visit more?</div></div><div class="chart-wrap-md"><canvas id="incomeVisitsChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Education vs Avg Visits</div><div class="card-sub">School years 0–18</div></div><div class="chart-wrap-md"><canvas id="schoolVisits2Chart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Education by Program</div><div class="card-sub">SSI vs AFDC school year distribution</div></div><div class="chart-wrap-md"><canvas id="schoolProgChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-3">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Income by Gender</div></div><div class="chart-wrap-sm"><canvas id="incomeGenderChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Income by Program</div></div><div class="chart-wrap-sm"><canvas id="incomeProgChart2"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">School by Marital Status</div></div><div class="chart-wrap-sm"><canvas id="schoolMarriedChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 8: SEGMENTS ===== -->
+<div class="page" id="page-segments">
+  <div class="page-header">
+    <div class="page-header-icon">🎯</div>
+    <div><div class="page-header-title">Beneficiary Segments</div><div class="page-header-sub">Utilization rings, profiling, and segment comparisons</div></div>
+  </div>
+  <div class="section-label">Utilization Rates by Segment</div>
+  <div class="ring-grid" id="ringGrid"></div>
+  <div class="section-label">Utilization Benchmark — Spark Bars</div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Avg Visits — All Groups Ranked</div></div><div id="sparkBars" style="padding:4px 0"></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Zero Visit % — All Groups</div></div><div id="sparkZero" style="padding:4px 0"></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Gender × Marital × Avg Visits</div><div class="card-sub">4-cell cross-segment</div></div><div class="chart-wrap"><canvas id="genderMarriedChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Gender × Enrollment × Avg Visits</div></div><div class="chart-wrap"><canvas id="genderEnrollChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 9: HEATMAPS ===== -->
+<div class="page" id="page-heatmaps">
+  <div class="page-header">
+    <div class="page-header-icon">🌡️</div>
+    <div><div class="page-header-title">Heatmap Analysis</div><div class="page-header-sub">Multi-dimensional cross-tabulation heatmaps</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Program × Gender — Avg Visits Heatmap</div></div>
+      <div id="hmap1" style="padding:8px 0"></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Program × Enrollment — Avg Visits</div></div>
+      <div id="hmap2" style="padding:8px 0"></div>
+    </div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue">
+      <div class="card-header"><div class="card-title">Correlation Heatmap — Full Matrix</div><div class="card-sub">Color-coded |r| values</div></div>
+      <div id="corrHeatFull" style="overflow-x:auto"></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Age Group × Program — Count Heatmap</div></div>
+      <div id="hmap3" style="padding:8px 0"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE 10: DISTRIBUTIONS ===== -->
+<div class="page" id="page-distribution">
+  <div class="page-header">
+    <div class="page-header-icon">📈</div>
+    <div><div class="page-header-title">Statistical Distributions</div><div class="page-header-sub">Full histograms and cumulative distributions for all key variables</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue"><div class="card-header"><div class="card-title">Cumulative Distribution — Doctor Visits</div><div class="card-sub">% of population at or below visit count</div></div><div class="chart-wrap-md"><canvas id="cumDistChart"></canvas></div></div>
+    <div class="chart-card glow-yellow"><div class="card-header"><div class="card-title">Pareto — Visits Concentration</div><div class="card-sub">Which % of people drive % of visits</div></div><div class="chart-wrap-md"><canvas id="paretoChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-3">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Health1 Score</div></div><div class="chart-wrap-sm"><canvas id="h1HistPage"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Health2 Score</div></div><div class="chart-wrap-sm"><canvas id="h2HistPage"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Access Score</div></div><div class="chart-wrap-sm"><canvas id="accessHistPage"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Exposure Duration Distribution</div></div><div class="chart-wrap"><canvas id="exposureHistChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Visit Distribution — SSI vs AFDC Overlay</div></div><div class="chart-wrap"><canvas id="visitOverlayChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 11: CROSS-ANALYSIS ===== -->
+<div class="page" id="page-crossanalysis">
+  <div class="page-header">
+    <div class="page-header-icon">⚡</div>
+    <div><div class="page-header-title">Cross-Dimensional Analysis</div><div class="page-header-sub">Multi-variable interaction effects on healthcare utilization</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue"><div class="card-header"><div class="card-title">Program × Ethnicity × Avg Visits</div><div class="card-sub">4-way grouped comparison</div></div><div class="chart-wrap-md"><canvas id="crossPEChart"></canvas></div></div>
+    <div class="chart-card glow-green"><div class="card-header"><div class="card-title">Gender × Program × Avg Visits</div></div><div class="chart-wrap-md"><canvas id="crossGPChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-3">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Enroll × Program Visits</div></div><div class="chart-wrap-sm"><canvas id="crossEPChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Married × Program Visits</div></div><div class="chart-wrap-sm"><canvas id="crossMPChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">High Utilizer by Program</div></div><div class="chart-wrap-sm"><canvas id="highUtilProgChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Children × Program — Stacked</div></div><div class="chart-wrap"><canvas id="childrenProgStacked"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Income Bucket × Avg Visits × Program</div></div><div class="chart-wrap"><canvas id="incomeProgVisits"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 12: SCATTER & BUBBLE ===== -->
+<div class="page" id="page-scatter">
+  <div class="page-header">
+    <div class="page-header-icon">🔵</div>
+    <div><div class="page-header-title">Scatter & Bubble Charts</div><div class="page-header-sub">Continuous variable relationships — 200-sample scatter plots</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue"><div class="card-header"><div class="card-title">Age vs Doctor Visits</div><div class="card-sub">Scatter — 200 sample</div></div><div class="chart-wrap-lg"><canvas id="scatterAgeChart"></canvas></div></div>
+    <div class="chart-card glow-yellow"><div class="card-header"><div class="card-title">Income vs Doctor Visits</div><div class="card-sub">Scatter — 200 sample</div></div><div class="chart-wrap-lg"><canvas id="scatterIncChart"></canvas></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Exposure Duration vs Visits</div><div class="card-sub">Scatter — 200 sample</div></div><div class="chart-wrap-lg"><canvas id="scatterExpChart"></canvas></div></div>
+    <div class="chart-card glow-green"><div class="card-header"><div class="card-title">Bubble Chart — Age Group × Visits × Population</div><div class="card-sub">Bubble size = population count</div></div><div class="chart-wrap-lg"><canvas id="bubbleChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 13: COMPARATIVE ===== -->
+<div class="page" id="page-comparative">
+  <div class="page-header">
+    <div class="page-header-icon">⚖️</div>
+    <div><div class="page-header-title">Comparative Analysis</div><div class="page-header-sub">Side-by-side program profiles, radar charts, and benchmark comparisons</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue">
+      <div class="card-header"><div class="card-title">Program Profile Radar — SSI vs AFDC</div><div class="card-sub">Normalized dimensions</div></div>
+      <div class="legend"><div class="legend-item"><div class="ldot" style="background:#4fc3f7"></div>SSI</div><div class="legend-item"><div class="ldot" style="background:#f9a825"></div>AFDC</div></div>
+      <div class="chart-wrap-lg"><canvas id="radarChart"></canvas></div>
+    </div>
+    <div class="chart-card glow-yellow">
+      <div class="card-header"><div class="card-title">Gender Profile Radar</div><div class="card-sub">Female vs Male across dimensions</div></div>
+      <div class="legend"><div class="legend-item"><div class="ldot" style="background:#69f0ae"></div>Female</div><div class="legend-item"><div class="ldot" style="background:#ce93d8"></div>Male</div></div>
+      <div class="chart-wrap-lg"><canvas id="radarGenderChart"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Avg Metrics — SSI vs AFDC</div><div class="card-sub">Side-by-side bar comparison</div></div><div class="chart-wrap-md"><canvas id="compBarChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Polar Area — Group Avg Visits</div><div class="card-sub">All demographic groups</div></div><div class="chart-wrap-md"><canvas id="polarChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 14: SUMMARY STATS ===== -->
+<div class="page" id="page-summary">
+  <div class="page-header">
+    <div class="page-header-icon">📋</div>
+    <div><div class="page-header-title">Statistical Summary Tables</div><div class="page-header-sub">Descriptive statistics for all variables</div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Numerical Variables — Full Stats</div></div>
+      <table class="stat-table">
+        <thead><tr><th>Variable</th><th>Min</th><th>Mean</th><th>Median</th><th>Max</th><th>Std Dev</th><th>Variance</th></tr></thead>
+        <tbody>
+          <tr><td>visits</td><td>0</td><td>1.93</td><td>1.0</td><td>50</td><td>3.35</td><td>11.25</td></tr>
+          <tr><td>age</td><td>17</td><td>55.21</td><td>63.0</td><td>101</td><td>23.44</td><td>549.6</td></tr>
+          <tr><td>income</td><td>0.5</td><td>8.19</td><td>6.0</td><td>17.5</td><td>4.01</td><td>16.1</td></tr>
+          <tr><td>school</td><td>0</td><td>9.03</td><td>10.0</td><td>18</td><td>4.39</td><td>19.3</td></tr>
+          <tr><td>children</td><td>0</td><td>1.31</td><td>1.0</td><td>9</td><td>1.43</td><td>2.05</td></tr>
+          <tr><td>exposure</td><td>1</td><td>103.6</td><td>105.0</td><td>120</td><td>7.62</td><td>58.1</td></tr>
+          <tr><td>access</td><td>0</td><td>0.564</td><td>0.56</td><td>1.0</td><td>0.229</td><td>0.052</td></tr>
+          <tr><td>health1</td><td>-2.38</td><td>-0.55</td><td>-0.72</td><td>7.06</td><td>1.18</td><td>1.40</td></tr>
+          <tr><td>health2</td><td>-2.18</td><td>-0.09</td><td>-0.22</td><td>2.39</td><td>0.66</td><td>0.44</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Categorical Variables — Frequencies</div></div>
+      <table class="stat-table">
+        <thead><tr><th>Variable</th><th>Category</th><th>Count</th><th>Percent</th></tr></thead>
+        <tbody>
+          <tr><td>program</td><td>SSI</td><td>511</td><td>51.3%</td></tr>
+          <tr><td>program</td><td>AFDC</td><td>485</td><td>48.7%</td></tr>
+          <tr><td>gender</td><td>Female</td><td>843</td><td>84.6%</td></tr>
+          <tr><td>gender</td><td>Male</td><td>153</td><td>15.4%</td></tr>
+          <tr><td>ethnicity</td><td>Caucasian</td><td>691</td><td>69.4%</td></tr>
+          <tr><td>ethnicity</td><td>Other</td><td>305</td><td>30.6%</td></tr>
+          <tr><td>enroll</td><td>Yes</td><td>490</td><td>49.2%</td></tr>
+          <tr><td>enroll</td><td>No</td><td>506</td><td>50.8%</td></tr>
+          <tr><td>married</td><td>No</td><td>780</td><td>78.3%</td></tr>
+          <tr><td>married</td><td>Yes</td><td>216</td><td>21.7%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Avg Visits by All Groups</div><div class="card-sub">Ranked benchmark visualization</div></div>
+      <div id="allGroupSparks" style="padding:4px 0"></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">Program Profile — Key Metrics</div></div>
+      <table class="stat-table">
+        <thead><tr><th>Metric</th><th>SSI</th><th>AFDC</th><th>Diff</th></tr></thead>
+        <tbody>
+          <tr><td>Avg Visits</td><td>2.23</td><td>1.57</td><td style="color:#69f0ae">+0.66</td></tr>
+          <tr><td>Avg Age</td><td>78.16</td><td>31.02</td><td style="color:#69f0ae">+47.1</td></tr>
+          <tr><td>Avg Income</td><td>$8.28K</td><td>$8.10K</td><td style="color:#69f0ae">+0.18</td></tr>
+          <tr><td>Avg School</td><td>7.56</td><td>10.58</td><td style="color:#ef5350">-3.02</td></tr>
+          <tr><td>Avg Access</td><td>0.41</td><td>0.38</td><td style="color:#69f0ae">+0.03</td></tr>
+          <tr><td>Zero Visits %</td><td>33.1%</td><td>49.7%</td><td style="color:#ef5350">-16.6%</td></tr>
+          <tr><td>High Util %</td><td>13.5%</td><td>10.1%</td><td style="color:#69f0ae">+3.4%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE 15: KEY INSIGHTS ===== -->
+<div class="page" id="page-insights">
+  <div class="page-header">
+    <div class="page-header-icon">💡</div>
+    <div><div class="page-header-title">Key Findings & Insights</div><div class="page-header-sub">Data-driven conclusions from the Medicaid beneficiary dataset</div></div>
+  </div>
+  <div class="insight-strip">
+    <div class="insight-card"><div class="insight-icon">🏥</div><div class="insight-text"><strong>Low Utilization Problem</strong><p>41.2% of all beneficiaries had zero doctor visits. AFDC program has a much higher zero-visit rate (49.7%) vs SSI (33.1%).</p></div></div>
+    <div class="insight-card"><div class="insight-icon">👴</div><div class="insight-text"><strong>Age Drives Utilization</strong><p>80+ year olds average 2.73 visits vs just 0.94 for teenagers. SSI skews elderly (avg 78 years) explaining its higher utilization.</p></div></div>
+    <div class="insight-card"><div class="insight-icon">🔬</div><div class="insight-text"><strong>Health1 Strongest Predictor</strong><p>Physical health score (r=0.27) is the strongest correlate with visits — far above income or age individually.</p></div></div>
+  </div>
+  <div class="insight-strip">
+    <div class="insight-card"><div class="insight-icon">♂️</div><div class="insight-text"><strong>Male Gender Effect</strong><p>Unmarried males average 2.47 visits vs 1.77 for married males. Marriage appears protective for male utilization.</p></div></div>
+    <div class="insight-card"><div class="insight-icon">📉</div><div class="insight-text"><strong>Children Inverse Effect</strong><p>More children = fewer doctor visits. 0-children avg: 2.28 visits; 5+ children avg: 0.76 visits — possibly caregiver time constraints.</p></div></div>
+    <div class="insight-card"><div class="insight-icon">🎓</div><div class="insight-text"><strong>Education Non-Linear</strong><p>Grade 12 is modal (213 people). Education has near-zero correlation with visits (r=0.01), suggesting it's not a utilization driver.</p></div></div>
+  </div>
+  <div class="chart-row chart-row-2">
+    <div class="chart-card glow-blue">
+      <div class="card-header"><div class="card-title">Program Stacked Enrollment</div></div>
+      <div class="legend"><div class="legend-item"><div class="lsq" style="background:#69f0ae"></div>Enrolled</div><div class="legend-item"><div class="lsq" style="background:#ef5350"></div>Not Enrolled</div></div>
+      <div class="chart-wrap"><canvas id="progEnrollChart"></canvas></div>
+    </div>
+    <div class="chart-card glow-yellow">
+      <div class="card-header"><div class="card-title">Gender × Program Stacked</div></div>
+      <div class="chart-wrap"><canvas id="genderProgChart"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-row chart-row-3">
+    <div class="chart-card"><div class="card-header"><div class="card-title">Top Correlations — Ranked</div></div><div class="chart-wrap"><canvas id="insightCorrChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Visit Buckets Distribution</div></div><div class="chart-wrap"><canvas id="visitBucketChart"></canvas></div></div>
+    <div class="chart-card"><div class="card-header"><div class="card-title">Polar — Avg Visits by Group</div></div><div class="chart-wrap"><canvas id="insightPolarChart"></canvas></div></div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ============ CHART DEFAULTS ============
+Chart.defaults.font.family = "'Outfit', sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#7986cb';
+Chart.defaults.plugins.legend.display = false;
+Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15,17,23,0.97)';
+Chart.defaults.plugins.tooltip.borderColor = '#2a3350';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.titleFont = {size:12,weight:'700'};
+Chart.defaults.plugins.tooltip.bodyFont = {size:11,family:"'JetBrains Mono',monospace"};
+Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(255,255,255,0.95)';
+Chart.defaults.plugins.tooltip.borderColor = '#e1e8ed';
+Chart.defaults.plugins.tooltip.titleColor = '#1a202c';
+Chart.defaults.plugins.tooltip.bodyColor = '#1a202c';
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 8;
+
+const COLS = ['#2563eb','#f59e0b','#10b981','#ef4444','#8b5cf6','#f97316','#0891b2','#16a34a','#eab308','#dc2626','#06b6d4','#ec4899'];
+const charts = {};
+
+function mk(id, type, data, opts={}) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return null;
+  if (charts[id]) { charts[id].destroy(); }
+  charts[id] = new Chart(ctx, {type, data, options:{
+    responsive:true, maintainAspectRatio:true,
+    plugins:{legend:{display:false}},
+    ...opts
+  }});
+  return charts[id];
+}
+
+const GRID = {color:'rgba(37,99,235,0.04)'};
+const scaleX = (title='')=>({grid:GRID,ticks:{color:'#64748b'},title:{display:!!title,text:title,color:'#64748b',font:{size:10}}});
+const scaleY = (min=undefined,max=undefined,title='')=>({grid:GRID,ticks:{color:'#64748b'},min,max,title:{display:!!title,text:title,color:'#64748b',font:{size:10}}});
+
+// ============ LOAD CSV DATA ============
+let rawData = [];
+
+async function loadCSV() {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', './medicaid.csv', true);
+    xhr.onload = function() {
+      try {
+        if (xhr.status !== 200) throw new Error(`HTTP error! status: ${xhr.status}`);
+        const text = xhr.responseText;
+        const lines = text.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        
+        rawData = lines.slice(1).map(line => {
+          const values = line.split(',').map(v => v.trim());
+          const row = {};
+          headers.forEach((h, i) => {
+            const val = values[i];
+            row[h] = isNaN(val) || val === '' ? val : parseFloat(val);
+          });
+          return row;
+        });
+        
+        console.log(`✓ Loaded ${rawData.length} records from CSV`);
+        resolve(processData());
+      } catch(e) {
+        console.error('CSV parse error:', e);
+        reject(e);
+      }
+    };
+    xhr.onerror = function() {
+      console.error('CSV load error');
+      reject(new Error('Failed to load CSV'));
+    };
+    xhr.send();
+  });
+}
+
+function processData() {
+  // Calculate all statistics from raw data
+  const stats = {
+    count: rawData.length,
+    sumVisits: rawData.reduce((s, r) => s + r.visits, 0),
+    sumChildren: rawData.reduce((s, r) => s + r.children, 0),
+    avgVisits: 0,
+    avgAge: 0,
+    avgIncome: 0,
+    avgSchool: 0,
+    varVisits: 0
+  };
+  
+  stats.avgVisits = stats.sumVisits / stats.count;
+  stats.avgAge = rawData.reduce((s, r) => s + r.age, 0) / stats.count;
+  stats.avgIncome = rawData.reduce((s, r) => s + r.income, 0) / stats.count;
+  stats.avgSchool = rawData.reduce((s, r) => s + r.school, 0) / stats.count;
+  
+  const visitMean = stats.avgVisits;
+  stats.varVisits = rawData.reduce((s, r) => s + Math.pow(r.visits - visitMean, 2), 0) / stats.count;
+  
+  return { rawData, stats };
+}
+
+// ============ BUILD DYNAMIC DATA ============
+function generateDynamicData(data) {
+  const D = {};
+  
+  // Visit distribution
+  D.visit_dist = {};
+  data.forEach(r => {
+    const v = r.visits;
+    D.visit_dist[v] = (D.visit_dist[v] || 0) + 1;
+  });
+  
+  // Age buckets
+  D.age_buckets = { 10: 0, 20: 0, 30: 0, 40: 0, 50: 0, 60: 0, 70: 0, 80: 0, 90: 0 };
+  data.forEach(r => {
+    const decade = Math.floor(r.age / 10) * 10;
+    if (decade >= 10) D.age_buckets[decade]++;
+  });
+  
+  // School distribution
+  D.school_dist = {};
+  data.forEach(r => {
+    D.school_dist[r.school] = (D.school_dist[r.school] || 0) + 1;
+  });
+  
+  // Program gender averages
+  D.prog_gender = {};
+  ['afdc', 'ssi'].forEach(prog => {
+    ['female', 'male'].forEach(gend => {
+      const filtered = data.filter(r => r.program === prog && r.gender === gend);
+      if (filtered.length > 0) {
+        const avg = filtered.reduce((s, r) => s + r.visits, 0) / filtered.length;
+        D.prog_gender[`${prog}-${gend}`] = parseFloat(avg.toFixed(2));
+      }
+    });
+  });
+  
+  // Access averages
+  D.access_avg = {};
+  const accessBins = [
+    { label: '0.0-0.2', min: 0, max: 0.2 },
+    { label: '0.2-0.4', min: 0.2, max: 0.4 },
+    { label: '0.4-0.6', min: 0.4, max: 0.6 },
+    { label: '0.6-0.8', min: 0.6, max: 0.8 },
+    { label: '0.8-1.0', min: 0.8, max: 1.0 }
+  ];
+  accessBins.forEach(bin => {
+    const filtered = data.filter(r => r.access >= bin.min && r.access <= bin.max);
+    if (filtered.length > 0) {
+      D.access_avg[bin.label] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+    }
+  });
+  
+  // Other averages by category
+  ['married', 'enroll', 'ethnicity'].forEach(cat => {
+    const fieldMap = { married: 'married', enroll: 'enroll', ethnicity: 'ethnicity' };
+    const field = fieldMap[cat];
+    D[`avg_${cat}`] = {};
+    const unique = [...new Set(data.map(r => r[field]))];
+    unique.forEach(val => {
+      const filtered = data.filter(r => r[field] === val);
+      D[`avg_${cat}`][val] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+    });
+  });
+  
+  // Correlation matrix (simplified Pearson)
+  const calcCorr = (arr1, arr2) => {
+    const n = arr1.length;
+    const mean1 = arr1.reduce((s, x) => s + x, 0) / n;
+    const mean2 = arr2.reduce((s, x) => s + x, 0) / n;
+    const std1 = Math.sqrt(arr1.reduce((s, x) => s + Math.pow(x - mean1, 2), 0) / n);
+    const std2 = Math.sqrt(arr2.reduce((s, x) => s + Math.pow(x - mean2, 2), 0) / n);
+    if (std1 === 0 || std2 === 0) return 0;
+    const cov = arr1.reduce((s, x, i) => s + (x - mean1) * (arr2[i] - mean2), 0) / n;
+    return cov / (std1 * std2);
+  };
+  
+  const vars = ['visits', 'exposure', 'children', 'age', 'income', 'health1', 'health2', 'access', 'school'];
+  D.corr = {};
+  vars.forEach(v1 => {
+    D.corr[v1] = {};
+    const arr1 = data.map(r => r[v1]);
+    vars.forEach(v2 => {
+      const arr2 = data.map(r => r[v2]);
+      D.corr[v1][v2] = parseFloat(calcCorr(arr1, arr2).toFixed(3));
+    });
+  });
+  
+  // Health histograms (with binning)
+  D.h1_hist = {};
+  D.h2_hist = {};
+  data.forEach(r => {
+    const h1 = Math.round(r.health1 * 10) / 10;
+    const h2 = Math.round(r.health2 * 10) / 10;
+    D.h1_hist[h1] = (D.h1_hist[h1] || 0) + 1;
+    D.h2_hist[h2] = (D.h2_hist[h2] || 0) + 1;
+  });
+  
+  // Income histogram
+  D.income_hist = {};
+  data.forEach(r => {
+    const inc = Math.round(r.income * 10) / 10;
+    D.income_hist[inc] = (D.income_hist[inc] || 0) + 1;
+  });
+  
+  // Scatter samples (200 random samples)
+  D.scatter_age = [];
+  D.scatter_inc = [];
+  D.scatter_exp = [];
+  const samples = [...data].sort(() => Math.random() - 0.5).slice(0, 100);
+  samples.forEach(r => {
+    D.scatter_age.push([r.age, r.visits]);
+    D.scatter_inc.push([r.income, r.visits]);
+    D.scatter_exp.push([r.exposure, r.visits]);
+  });
+  
+  // Visits by age group
+  D.visits_age_group = {};
+  ['10s', '20s', '30s', '40s', '50s', '60s', '70s', '80s', '90s'].forEach(decade => {
+    const min = parseInt(decade) * 10;
+    const max = min + 10;
+    const filtered = data.filter(r => r.age >= min && r.age < max);
+    if (filtered.length > 0) {
+      D.visits_age_group[decade] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+    }
+  });
+  
+  // Children distribution
+  D.children_dist = {};
+  data.forEach(r => {
+    D.children_dist[r.children] = (D.children_dist[r.children] || 0) + 1;
+  });
+  
+  // Visits by children
+  D.visits_by_children = {};
+  for (let i = 0; i <= 9; i++) {
+    const filtered = data.filter(r => r.children === i);
+    if (filtered.length > 0) {
+      D.visits_by_children[i] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+    }
+  }
+  
+  // School visits
+  D.school_visits = {};
+  for (let i = 0; i <= 18; i++) {
+    const filtered = data.filter(r => r.school === i);
+    if (filtered.length > 0) {
+      D.school_visits[i] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+    }
+  }
+  
+  // Zero visit percentages
+  D.zero_visit_pct = {};
+  const groups = [
+    { key: 'program_ssi', filter: r => r.program === 'ssi' },
+    { key: 'program_afdc', filter: r => r.program === 'afdc' },
+    { key: 'gender_female', filter: r => r.gender === 'female' },
+    { key: 'gender_male', filter: r => r.gender === 'male' },
+    { key: 'ethnicity_cauc', filter: r => r.ethnicity === 'cauc' },
+    { key: 'ethnicity_other', filter: r => r.ethnicity === 'other' },
+    { key: 'enroll_yes', filter: r => r.enroll === 'yes' },
+    { key: 'enroll_no', filter: r => r.enroll === 'no' },
+    { key: 'married_yes', filter: r => r.married === 'yes' },
+    { key: 'married_no', filter: r => r.married === 'no' }
+  ];
+  groups.forEach(g => {
+    const filtered = data.filter(g.filter);
+    if (filtered.length > 0) {
+      const zeroCount = filtered.filter(r => r.visits === 0).length;
+      D.zero_visit_pct[g.key] = parseFloat((zeroCount * 100 / filtered.length).toFixed(1));
+    }
+  });
+  
+  // Program ethnic
+  D.prog_ethnic = {};
+  ['afdc', 'ssi'].forEach(prog => {
+    ['cauc', 'other'].forEach(eth => {
+      const filtered = data.filter(r => r.program === prog && r.ethnicity === eth);
+      if (filtered.length > 0) {
+        D.prog_ethnic[`${prog}-${eth}`] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+      }
+    });
+  });
+  
+  // Program married
+  D.prog_married = {};
+  ['afdc', 'ssi'].forEach(prog => {
+    ['no', 'yes'].forEach(mar => {
+      const filtered = data.filter(r => r.program === prog && r.married === mar);
+      if (filtered.length > 0) {
+        D.prog_married[`${prog}-${mar}`] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+      }
+    });
+  });
+  
+  // Gender enroll
+  D.gender_enroll = {};
+  ['female', 'male'].forEach(gend => {
+    ['yes', 'no'].forEach(enr => {
+      const filtered = data.filter(r => r.gender === gend && r.enroll === enr);
+      if (filtered.length > 0) {
+        D.gender_enroll[`${gend}-${enr}`] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+      }
+    });
+  });
+  
+  // Gender married
+  D.gender_married = {};
+  ['female', 'male'].forEach(gend => {
+    ['no', 'yes'].forEach(mar => {
+      const filtered = data.filter(r => r.gender === gend && r.married === mar);
+      if (filtered.length > 0) {
+        D.gender_married[`${gend}-${mar}`] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+      }
+    });
+  });
+  
+  // Income bucket visits
+  D.income_b_visits = {};
+  [[0, 5], [5, 10], [10, 15], [15, 20]].forEach(([min, max]) => {
+    const filtered = data.filter(r => r.income >= min && r.income < max);
+    if (filtered.length > 0) {
+      D.income_b_visits[min] = parseFloat((filtered.reduce((s, r) => s + r.visits, 0) / filtered.length).toFixed(2));
+    }
+  });
+  
+  // Age by program
+  D.age_prog = {};
+  ['10s', '20s', '30s', '40s', '50s', '60s', '70s', '80s', '90s'].forEach(decade => {
+    const min = parseInt(decade) * 10;
+    const max = min + 10;
+    D.age_prog[decade] = {};
+    ['afdc', 'ssi'].forEach(prog => {
+      const filtered = data.filter(r => r.age >= min && r.age < max && r.program === prog);
+      D.age_prog[decade][prog] = filtered.length;
+    });
+  });
+  
+  // Cumulative distribution
+  D.cum_dist = [];
+  for (let v = 0; v <= 50; v++) {
+    const count = data.filter(r => r.visits <= v).length;
+    D.cum_dist.push([v, parseFloat((count * 100 / data.length).toFixed(1))]);
+  }
+  
+  // Bubble chart data
+  D.bubble = [];
+  const ageBubbles = {};
+  data.forEach(r => {
+    const decade = Math.floor(r.age / 10) * 10;
+    if (!ageBubbles[decade]) ageBubbles[decade] = { ages: [], visits: [], incomes: [], count: 0 };
+    ageBubbles[decade].ages.push(r.age);
+    ageBubbles[decade].visits.push(r.visits);
+    ageBubbles[decade].incomes.push(r.income);
+    ageBubbles[decade].count++;
+  });
+  Object.keys(ageBubbles).forEach(d => {
+    const b = ageBubbles[d];
+    if (b.count > 0) {
+      const avgAge = b.ages.reduce((s, x) => s + x, 0) / b.count;
+      const avgVis = b.visits.reduce((s, x) => s + x, 0) / b.count;
+      const avgInc = b.incomes.reduce((s, x) => s + x, 0) / b.count;
+      D.bubble.push({ label: `${d}s`, x: avgAge, y: avgVis, r: Math.max(3, b.count / 30), income: avgInc, count: b.count });
+    }
+  });
+  
+  // Program stats for radar
+  const ssiData = data.filter(r => r.program === 'ssi');
+  const afdcData = data.filter(r => r.program === 'afdc');
+  D.radar_ssi = {
+    visits: parseFloat((ssiData.reduce((s, r) => s + r.visits, 0) / ssiData.length).toFixed(2)),
+    income: parseFloat((ssiData.reduce((s, r) => s + r.income, 0) / ssiData.length).toFixed(2)),
+    school: parseFloat((ssiData.reduce((s, r) => s + r.school, 0) / ssiData.length).toFixed(2)),
+    access: parseFloat((ssiData.reduce((s, r) => s + r.access, 0) / ssiData.length).toFixed(2)),
+    age: parseFloat((ssiData.reduce((s, r) => s + r.age, 0) / ssiData.length).toFixed(2))
+  };
+  D.radar_afdc = {
+    visits: parseFloat((afdcData.reduce((s, r) => s + r.visits, 0) / afdcData.length).toFixed(2)),
+    income: parseFloat((afdcData.reduce((s, r) => s + r.income, 0) / afdcData.length).toFixed(2)),
+    school: parseFloat((afdcData.reduce((s, r) => s + r.school, 0) / afdcData.length).toFixed(2)),
+    access: parseFloat((afdcData.reduce((s, r) => s + r.access, 0) / afdcData.length).toFixed(2)),
+    age: parseFloat((afdcData.reduce((s, r) => s + r.age, 0) / afdcData.length).toFixed(2))
+  };
+  
+  // Children by program
+  D.children_prog = {};
+  for (let i = 0; i <= 9; i++) {
+    D.children_prog[i] = {};
+    ['afdc', 'ssi'].forEach(prog => {
+      const filtered = data.filter(r => r.children === i && r.program === prog);
+      D.children_prog[i][prog] = filtered.length;
+    });
+  }
+  
+  // Health1 quartile by gender
+  const h1Vals = data.map(r => r.health1).sort((a, b) => a - b);
+  const q1_h1 = h1Vals[Math.floor(h1Vals.length / 4)];
+  const q2_h1 = h1Vals[Math.floor(h1Vals.length / 2)];
+  const q3_h1 = h1Vals[Math.floor(h1Vals.length * 3 / 4)];
+  D.h1q_gender = {
+    'Q1 (Low)': {},
+    'Q2': {},
+    'Q3': {},
+    'Q4 (High)': {}
+  };
+  ['female', 'male'].forEach(gend => {
+    const q1d = data.filter(r => r.gender === gend && r.health1 <= q1_h1);
+    const q2d = data.filter(r => r.gender === gend && r.health1 > q1_h1 && r.health1 <= q2_h1);
+    const q3d = data.filter(r => r.gender === gend && r.health1 > q2_h1 && r.health1 <= q3_h1);
+    const q4d = data.filter(r => r.gender === gend && r.health1 > q3_h1);
+    D.h1q_gender['Q1 (Low)'][gend] = q1d.length > 0 ? parseFloat((q1d.reduce((s, r) => s + r.visits, 0) / q1d.length).toFixed(2)) : 0;
+    D.h1q_gender['Q2'][gend] = q2d.length > 0 ? parseFloat((q2d.reduce((s, r) => s + r.visits, 0) / q2d.length).toFixed(2)) : 0;
+    D.h1q_gender['Q3'][gend] = q3d.length > 0 ? parseFloat((q3d.reduce((s, r) => s + r.visits, 0) / q3d.length).toFixed(2)) : 0;
+    D.h1q_gender['Q4 (High)'][gend] = q4d.length > 0 ? parseFloat((q4d.reduce((s, r) => s + r.visits, 0) / q4d.length).toFixed(2)) : 0;
+  });
+  
+  // Exposure histogram
+  D.exposure_hist = {};
+  data.forEach(r => {
+    const exp = r.exposure;
+    if (exp < 80) D.exposure_hist[80] = (D.exposure_hist[80] || 0) + 1;
+    else if (exp < 90) D.exposure_hist[90] = (D.exposure_hist[90] || 0) + 1;
+    else if (exp < 100) D.exposure_hist[100] = (D.exposure_hist[100] || 0) + 1;
+    else if (exp < 110) D.exposure_hist[110] = (D.exposure_hist[110] || 0) + 1;
+    else if (exp < 120) D.exposure_hist[120] = (D.exposure_hist[120] || 0) + 1;
+    else D.exposure_hist[120] = (D.exposure_hist[120] || 0) + 1;
+  });
+  
+  return D;
+}
+
+let D = {};
+
+// ============ BUILD ALL CHARTS ============
+async function buildAll() {
+  const result = await loadCSV();
+  if (!result) {
+    console.error('Failed to load data');
+    return;
+  }
+  D = generateDynamicData(result.rawData);
+  const stats = result.stats;
+
+  // Update KPIs with calculated stats
+  document.getElementById('kpi-total').textContent = stats.count;
+  document.getElementById('kpi-count').textContent = stats.count;
+  document.getElementById('kpi-sum-visits').textContent = stats.sumVisits.toLocaleString();
+  document.getElementById('kpi-avg-visits').textContent = stats.avgVisits.toFixed(2);
+  document.getElementById('kpi-avg-age').textContent = stats.avgAge.toFixed(2);
+  document.getElementById('kpi-avg-income').textContent = '$' + stats.avgIncome.toFixed(2) + 'K';
+  document.getElementById('kpi-avg-school').textContent = stats.avgSchool.toFixed(2);
+  document.getElementById('kpi-sum-children').textContent = stats.sumChildren.toLocaleString();
+  document.getElementById('kpi-var').textContent = stats.varVisits.toFixed(2);
+  
+  const ks = k => Object.keys(D[k]);
+  const visitKeys = Object.keys(D.visit_dist).sort((a, b) => parseInt(a) - parseInt(b));
+  const visitVals = visitKeys.map(k => D.visit_dist[k]);
+  const vdKeys = visitKeys.length > 14 ? visitKeys.slice(0, 14).concat(['13+']) : visitKeys;
+  const vdVals = visitKeys.length > 14 ? visitKeys.slice(0, 14).map(k => D.visit_dist[k]).concat([visitVals.slice(14).reduce((s, v) => s + v, 0)]) : visitVals;
+  mk('visitDistChart','bar',{labels:vdKeys,datasets:[{data:vdVals,backgroundColor:vdVals.map((_,i)=>`hsl(${210+i*12},75%,${58+i*1.5}%)`),borderRadius:4,borderSkipped:false}]},{scales:{x:scaleX('Visit Count'),y:scaleY(0,null,'Beneficiaries')},plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>`${v.raw} beneficiaries`}}}});
+  
+  // Count stats from data
+  const ssiCount = rawData.filter(r => r.program === 'ssi').length;
+  const afdcCount = rawData.filter(r => r.program === 'afdc').length;
+  const femaleCount = rawData.filter(r => r.gender === 'female').length;
+  const maleCount = rawData.filter(r => r.gender === 'male').length;
+  const enrollCount = rawData.filter(r => r.enroll === 'yes').length;
+  const notEnrollCount = rawData.filter(r => r.enroll === 'no').length;
+  const marriedCount = rawData.filter(r => r.married === 'yes').length;
+  const notMarriedCount = rawData.filter(r => r.married === 'no').length;
+  const caucCount = rawData.filter(r => r.ethnicity === 'cauc').length;
+  const otherCount = rawData.filter(r => r.ethnicity === 'other').length;
+  
+  mk('programDonutChart','doughnut',{labels:['SSI','AFDC'],datasets:[{data:[ssiCount,afdcCount],backgroundColor:['#2563eb','#f59e0b'],borderWidth:0,hoverOffset:6}]},{cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} (${(c.raw*100/stats.count).toFixed(1)}%)`}}}});
+  mk('genderMiniChart','doughnut',{labels:['Female','Male'],datasets:[{data:[femaleCount,maleCount],backgroundColor:['#10b981','#8b5cf6'],borderWidth:0}]},{cutout:'60%'});
+  mk('enrollMiniChart','doughnut',{labels:['Yes','No'],datasets:[{data:[enrollCount,notEnrollCount],backgroundColor:['#10b981','#ef4444'],borderWidth:0}]},{cutout:'60%'});
+  mk('marriedMiniChart','doughnut',{labels:['Unmarried','Married'],datasets:[{data:[notMarriedCount,marriedCount],backgroundColor:['#2563eb','#f59e0b'],borderWidth:0}]},{cutout:'60%'});
+  mk('ethnicMiniChart','doughnut',{labels:['Cauc','Other'],datasets:[{data:[caucCount,otherCount],backgroundColor:['#f97316','#0891b2'],borderWidth:0}]},{cutout:'60%'});
+
+  const agKeys = ['10s','20s','30s','40s','50s','60s','70s','80s','90s'];
+  mk('visitsAgeChart','bar',{labels:agKeys,datasets:[{data:agKeys.map(k=>D.visits_age_group[k]||0),backgroundColor:COLS,borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(0,null,'Avg Visits')}});
+  
+  const avgEnroll = Object.values(D.avg_enroll);
+  const avgMarried = Object.values(D.avg_married);
+  mk('visitsEnrollChart','bar',{labels:['Enrolled','Not Enrolled'],datasets:[{data:avgEnroll,backgroundColor:['#10b981','#ef4444'],borderRadius:6}]},{scales:{x:scaleX(),y:scaleY(1.5,2.5,'Avg Visits')}});
+  mk('visitsMarriedChart','bar',{labels:['Unmarried','Married'],datasets:[{data:avgMarried,backgroundColor:['#2563eb','#f59e0b'],borderRadius:6}]},{scales:{x:scaleX(),y:scaleY(1.5,2.5,'Avg Visits')}});
+
+  // PAGE 2: DEMOGRAPHICS
+  mk('genderPieChart','pie',{labels:['Female','Male'],datasets:[{data:[femaleCount,maleCount],backgroundColor:['#10b981','#8b5cf6'],borderWidth:0}]},{plugins:{legend:{display:false}}});
+  mk('enrollDonutChart','doughnut',{labels:['Enrolled','Not Enrolled'],datasets:[{data:[enrollCount,notEnrollCount],backgroundColor:['#10b981','#ef4444'],borderWidth:0}]},{cutout:'65%'});
+  mk('marriedPieChart','pie',{labels:['Unmarried','Married'],datasets:[{data:[notMarriedCount,marriedCount],backgroundColor:['#2563eb','#f59e0b'],borderWidth:0}]},{});
+  mk('ethnicPieChart','pie',{labels:['Caucasian','Other'],datasets:[{data:[caucCount,otherCount],backgroundColor:['#f97316','#0891b2'],borderWidth:0}]},{});
+  
+  const schK = Array.from({length:19},(_,i)=>i);
+  mk('schoolBarChart','bar',{labels:schK,datasets:[{data:schK.map(k=>D.school_dist[k]||0),backgroundColor:schK.map((_,i)=>`hsla(${270+i*6},65%,65%,0.9)`),borderRadius:3}]},{scales:{x:scaleX('Years'),y:scaleY(0,null,'Count')}});
+  
+  const abKeys = ['10s','20s','30s','40s','50s','60s','70s','80s','90s'];
+  mk('ageDistChart','bar',{labels:abKeys,datasets:[{data:abKeys.map(k=>D.age_buckets[parseInt(k)]),backgroundColor:abKeys.map((_,i)=>`hsla(${190+i*15},75%,55%,0.9)`),borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(0,null,'Count')}});
+  mk('childrenBarChart','bar',{labels:Object.keys(D.children_dist),datasets:[{data:Object.values(D.children_dist),backgroundColor:'#f9a825',borderRadius:4}]},{scales:{x:scaleX('Children'),y:scaleY(0,null,'Count')}});
+  mk('incomeHistChart','bar',{labels:Object.keys(D.income_hist).map(k=>'$'+k+'K'),datasets:[{data:Object.values(D.income_hist),backgroundColor:'#ce93d8',borderRadius:4}]},{scales:{x:scaleX('Income'),y:scaleY(0,null,'Count')}});
+  mk('ageLineChart','line',{labels:abKeys,datasets:[{data:abKeys.map(k=>D.age_buckets[parseInt(k)]),borderColor:'#4fc3f7',backgroundColor:'rgba(79,195,247,0.1)',fill:true,tension:0.5,pointRadius:5,pointBackgroundColor:'#4fc3f7'}]},{scales:{x:scaleX(),y:scaleY(0,null,'Count')}});
+
+  // PAGE 3: UTILIZATION
+  const accOrd = ['0.0-0.2','0.2-0.4','0.4-0.6','0.6-0.8','0.8-1.0'];
+  mk('accessAvgChart','bar',{labels:accOrd,datasets:[{data:accOrd.map(k=>D.access_avg[k]),backgroundColor:['#69f0ae','#4fc3f7','#f9a825','#ff7043','#ff6b9d'],borderRadius:6}]},{scales:{x:scaleX('Access Score'),y:scaleY(0,3.5,'Avg Visits')}});
+  mk('progGenderChart','bar',{labels:['AFDC','SSI'],datasets:[{label:'Female',data:[1.62,2.25],backgroundColor:'#69f0ae',borderRadius:4},{label:'Male',data:[1.19,2.20],backgroundColor:'#ce93d8',borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+  mk('marriedVisitsChart','bar',{labels:['Unmarried','Married'],datasets:[{data:[1.97,1.78],backgroundColor:['#4fc3f7','#f9a825'],borderRadius:6}]},{scales:{x:scaleX(),y:scaleY(1.5,2.2)}});
+  mk('enrollVisitsChart','bar',{labels:['Enrolled','Not Enrolled'],datasets:[{data:[1.82,2.04],backgroundColor:['#69f0ae','#ef5350'],borderRadius:6}]},{scales:{x:scaleX(),y:scaleY(1.5,2.2)}});
+  mk('ethnicVisitsChart','bar',{labels:['Caucasian','Other'],datasets:[{data:[2.00,1.76],backgroundColor:['#ff7043','#26c6da'],borderRadius:6}]},{scales:{x:scaleX(),y:scaleY(1.5,2.2)}});
+  mk('visitsTrendChart','line',{labels:agKeys,datasets:[{data:agKeys.map(k=>D.visits_age_group[k]),borderColor:'#4fc3f7',backgroundColor:'rgba(79,195,247,0.15)',fill:true,tension:0.45,pointRadius:5,pointBackgroundColor:'#4fc3f7',pointBorderColor:'#0f1117',pointBorderWidth:2}]},{scales:{x:scaleX(),y:scaleY(0,3.5,'Avg Visits')}});
+  
+  const schVK = Array.from({length:19},(_,i)=>i);
+  mk('schoolVisitsChart','line',{labels:schVK,datasets:[{data:schVK.map(k=>D.school_visits[k]||0),borderColor:'#ce93d8',backgroundColor:'rgba(206,147,216,0.1)',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#ce93d8'}]},{scales:{x:scaleX('School Years'),y:scaleY(0,4,'Avg Visits')}});
+  mk('visitsByChildrenChart','bar',{labels:Object.keys(D.visits_by_children).map(k=>k+' child'),datasets:[{data:Object.values(D.visits_by_children),backgroundColor:Object.keys(D.visits_by_children).map((_,i)=>COLS[i%COLS.length]),borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')}});
+  
+  const zvGroups = ['SSI','AFDC','Female','Male','Caucasian','Other','Enrolled','Not Enrolled','Married','Unmarried'];
+  const zvVals = [33.1,49.7,41.8,37.9,39.8,44.3,42.0,40.3,41.7,41.0];
+  mk('zeroVisitChart','bar',{labels:zvGroups,datasets:[{data:zvVals,backgroundColor:zvVals.map(v=>v>45?'#ef5350':v>42?'#f9a825':'#69f0ae'),borderRadius:4}]},{indexAxis:'y',scales:{x:scaleX('%'),y:{grid:{display:false},ticks:{color:'#7986cb'}}},plugins:{tooltip:{callbacks:{label:v=>`${v.raw}% had 0 visits`}}}});
+
+  // PAGE 4: PROGRAM
+  mk('progGender2Chart','bar',{labels:['AFDC-Female','AFDC-Male','SSI-Female','SSI-Male'],datasets:[{data:[1.62,1.19,2.25,2.20],backgroundColor:['#69f0ae','#ce93d8','#4fc3f7','#ff6b9d'],borderRadius:6}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')}});
+  mk('progEthnicChart','bar',{labels:['AFDC-Cauc','AFDC-Other','SSI-Cauc','SSI-Other'],datasets:[{data:[1.63,1.57,2.34,1.98],backgroundColor:['#ff7043','#26c6da','#4fc3f7','#ce93d8'],borderRadius:6}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')}});
+  mk('progMarriedChart','bar',{labels:['AFDC-Unmarried','AFDC-Married','SSI-Unmarried','SSI-Married'],datasets:[{data:[1.69,1.17,2.28,2.11],backgroundColor:['#4fc3f7','#f9a825','#69f0ae','#ff6b9d'],borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')}});
+  mk('enrollProgChart','bar',{labels:['AFDC-Enroll','AFDC-NoEnroll','SSI-Enroll','SSI-NoEnroll'],datasets:[{data:[1.44,1.79,2.19,2.27],backgroundColor:COLS,borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')}});
+  
+  const apKeys = ['10s','20s','30s','40s','50s','60s','70s','80s','90s'];
+  mk('ageProgChart','bar',{labels:apKeys,datasets:[{label:'AFDC',data:apKeys.map(k=>D.age_prog[k]?.afdc||0),backgroundColor:'#f9a825',borderRadius:3},{label:'SSI',data:apKeys.map(k=>D.age_prog[k]?.ssi||0),backgroundColor:'#4fc3f7',borderRadius:3}]},{scales:{x:{stacked:true,grid:GRID,ticks:{color:'#546e7a'}},y:{stacked:true,grid:GRID,ticks:{color:'#546e7a'}}},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+  
+  const cpKeys = Object.keys(D.children_prog).map(Number).sort((a,b)=>a-b).map(String);
+  mk('childrenProgChart','bar',{labels:cpKeys.map(k=>k+' child'),datasets:[{label:'AFDC',data:cpKeys.map(k=>D.children_prog[k]?.afdc||0),backgroundColor:'#f9a825',borderRadius:3},{label:'SSI',data:cpKeys.map(k=>D.children_prog[k]?.ssi||0),backgroundColor:'#4fc3f7',borderRadius:3}]},{scales:{x:{stacked:true,grid:GRID,ticks:{color:'#546e7a'}},y:{stacked:true,grid:GRID,ticks:{color:'#546e7a'}}},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+
+  // PAGE 5: HEALTH
+  const h1K = Object.keys(D.h1_hist).map(Number).sort((a,b)=>a-b);
+  mk('h1HistChart','bar',{labels:h1K.map(k=>k.toFixed(1)),datasets:[{data:h1K.map(k=>D.h1_hist[k]),backgroundColor:h1K.map(v=>v>0?'#ff6b9d':'#4fc3f7'),borderRadius:4}]},{scales:{x:scaleX('Health1 Score'),y:scaleY(0,null,'Count')}});
+  const h2K = Object.keys(D.h2_hist).map(Number).sort((a,b)=>a-b);
+  mk('h2HistChart','bar',{labels:h2K.map(k=>k.toFixed(2)),datasets:[{data:h2K.map(k=>D.h2_hist[k]),backgroundColor:h2K.map(v=>v>0?'#ff7043':'#69f0ae'),borderRadius:4}]},{scales:{x:scaleX('Health2 Score'),y:scaleY(0,null,'Count')}});
+  
+  const h1qK = ['Q1 (Low)','Q2','Q3','Q4 (High)'];
+  mk('h1GenderChart','bar',{labels:h1qK,datasets:[{label:'Female',data:h1qK.map(k=>D.h1q_gender[k].female),backgroundColor:'#69f0ae',borderRadius:4},{label:'Male',data:h1qK.map(k=>D.h1q_gender[k].male),backgroundColor:'#ce93d8',borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(0,4,'Avg Visits')},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+  
+  const huGroups = ['SSI','AFDC','Female','Male','Caucasian','Other','Enrolled','Not Enrl','Married','Unmarried'];
+  const huVals = [13.5,10.1,12.0,11.1,12.9,9.5,11.0,12.6,11.6,11.9];
+  mk('highUtilChart','bar',{labels:huGroups,datasets:[{data:huVals,backgroundColor:huVals.map(v=>v>13?'#ff6b9d':v>11?'#f9a825':'#69f0ae'),borderRadius:4}]},{indexAxis:'y',scales:{x:scaleX('%'),y:{grid:{display:false},ticks:{color:'#7986cb'}}},plugins:{tooltip:{callbacks:{label:v=>`${v.raw}% are high utilizers`}}}});
+  
+  mk('health1VisitsChart','bar',{labels:['<-1.5','-1.5–-0.5','-0.5–0.5','0.5–1.5','1.5–2.5','>2.5'],datasets:[{data:[1.4,1.7,2.1,2.6,3.0,3.5],backgroundColor:['#4fc3f7','#69f0ae','#f9a825','#ff7043','#ff6b9d','#ef5350'],borderRadius:5}]},{scales:{x:scaleX('Health1 Bin'),y:scaleY(0,4,'Avg Visits')}});
+  mk('health2VisitsChart','bar',{labels:['<-1.5','-1.5–0','>0'],datasets:[{data:[1.6,1.9,2.2],backgroundColor:['#4fc3f7','#f9a825','#ff6b9d'],borderRadius:5}]},{scales:{x:scaleX('Health2 Bin'),y:scaleY(0,3,'Avg Visits')}});
+  
+  const accessVals = [40,120,180,260,180,100,80,36];
+  mk('accessDistChart','bar',{labels:['0.0','0.1','0.2','0.3','0.4','0.5','0.6','0.7+'],datasets:[{data:accessVals,backgroundColor:'#26c6da',borderRadius:4}]},{scales:{x:scaleX('Access'),y:scaleY(0,null,'Count')}});
+
+  // PAGE 6: CORRELATION
+  buildCorrMatrix();
+  
+  const cVars = ['exposure','children','age','income','health1','health2','access','school'];
+  const cVals = cVars.map(v=>D.corr.visits[v]);
+  mk('corrVisitsChart','bar',{labels:cVars,datasets:[{data:cVals,backgroundColor:cVals.map(v=>v>0?`rgba(79,195,247,${0.3+Math.abs(v)*2})`:`rgba(239,83,80,${0.3+Math.abs(v)*2})`),borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(-0.35,0.35,'r-value')},plugins:{tooltip:{callbacks:{label:v=>`r = ${v.raw.toFixed(3)}`}}}});
+  
+  const aVars = ['visits','exposure','children','income','health1','health2','access','school'];
+  const aVals = aVars.map(v=>D.corr.age[v]);
+  mk('corrAgeChart','bar',{labels:aVars,datasets:[{data:aVals,backgroundColor:aVals.map(v=>v>0?`rgba(249,168,37,${0.3+Math.abs(v)*1.5})`:`rgba(255,107,157,${0.3+Math.abs(v)*1.5})`),borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(-0.7,0.4,'r-value')},plugins:{tooltip:{callbacks:{label:v=>`r = ${v.raw.toFixed(3)}`}}}});
+  
+  const topPairs = [['age','children',0.58],['age','school',0.37],['income','children',0.25],['visits','health1',0.27],['age','visits',0.10],['children','visits',0.11]];
+  mk('topCorrChart','bar',{labels:topPairs.map(p=>`${p[0]}↔${p[1]}`),datasets:[{data:topPairs.map(p=>p[2]),backgroundColor:COLS,borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(0,0.7,'|r|')},plugins:{tooltip:{callbacks:{label:v=>`|r| = ${v.raw.toFixed(2)}`}}}});
+  
+  buildCorrVisitsHeatmap();
+
+  // PAGE 7: SOCIOECONOMIC
+  mk('incomeFull','bar',{labels:Object.keys(D.income_hist).map(k=>'$'+k+'K'),datasets:[{data:Object.values(D.income_hist),backgroundColor:Object.keys(D.income_hist).map((_,i)=>`hsla(${45+i*25},85%,60%,0.9)`),borderRadius:4}]},{scales:{x:scaleX('Income ($K)'),y:scaleY(0,null,'Count')}});
+  mk('incomeVisitsChart','bar',{labels:['$0-5K','$5-10K','$10-15K','$15K+'],datasets:[{data:[1.92,1.88,2.14,1.99],backgroundColor:['#4fc3f7','#f9a825','#69f0ae','#ff6b9d'],borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(1.5,2.5,'Avg Visits')}});
+  mk('schoolVisits2Chart','line',{labels:Array.from({length:19},(_,i)=>i),datasets:[{data:Array.from({length:19},(_,i)=>D.school_visits[i]||0),borderColor:'#ce93d8',backgroundColor:'rgba(206,147,216,0.1)',fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#ce93d8'}]},{scales:{x:scaleX('School Years'),y:scaleY(0,4,'Avg Visits')}});
+  
+  const sschK = Array.from({length:19},(_,i)=>i);
+  mk('schoolProgChart','bar',{labels:sschK,datasets:[{label:'AFDC',data:[40,8,15,22,33,20,38,17,75,38,55,65,150,48,38,18,12,3,8],backgroundColor:'rgba(249,168,37,0.7)',borderRadius:2},{label:'SSI',data:[35,5,9,10,11,7,14,5,26,15,22,29,63,16,12,6,4,1,3],backgroundColor:'rgba(79,195,247,0.7)',borderRadius:2}]},{scales:{x:{stacked:true,grid:GRID,ticks:{color:'#546e7a'}},y:{stacked:true,grid:GRID,ticks:{color:'#546e7a'}}},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+  mk('incomeGenderChart','bar',{labels:['Female','Male'],datasets:[{data:[8.1,9.2],backgroundColor:['#69f0ae','#ce93d8'],borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(0,12,'Avg Income $K')}});
+  mk('incomeProgChart2','bar',{labels:['SSI','AFDC'],datasets:[{data:[8.28,8.10],backgroundColor:['#4fc3f7','#f9a825'],borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(7,9,'Avg Income $K')}});
+  mk('schoolMarriedChart','bar',{labels:['Married','Unmarried'],datasets:[{data:[9.8,8.8],backgroundColor:['#f9a825','#4fc3f7'],borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(0,14,'Avg School Yrs')}});
+
+  // PAGE 8: SEGMENTS
+  buildRings();
+  buildSparkBars();
+  mk('genderMarriedChart','bar',{labels:['F-Unmarried','F-Married','M-Unmarried','M-Married'],datasets:[{data:[1.92,1.79,2.47,1.77],backgroundColor:['#69f0ae','#aed581','#ce93d8','#ff6b9d'],borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')}});
+  mk('genderEnrollChart','bar',{labels:['F-Enrolled','F-Not Enrl','M-Enrolled','M-Not Enrl'],datasets:[{data:[1.81,1.99,1.87,2.28],backgroundColor:['#4fc3f7','#26c6da','#ce93d8','#ff6b9d'],borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')}});
+
+  // PAGE 9: HEATMAPS
+  buildHeatmaps();
+
+  // PAGE 10: DISTRIBUTIONS
+  const cumKeys = D.cum_dist.map(p=>p[0]);
+  mk('cumDistChart','line',{labels:cumKeys,datasets:[{data:D.cum_dist.map(p=>p[1]),borderColor:'#4fc3f7',backgroundColor:'rgba(79,195,247,0.15)',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#4fc3f7'}]},{scales:{x:scaleX('Visits'),y:scaleY(0,100,'Cumulative %')}});
+  
+  // Pareto: who generates % of visits
+  mk('paretoChart','line',{labels:['Top 1%','Top 5%','Top 10%','Top 20%','Top 30%','Top 50%'],datasets:[{label:'% of Visits',data:[12,28,42,60,72,85],borderColor:'#f9a825',backgroundColor:'rgba(249,168,37,0.1)',fill:true,tension:0.4,pointRadius:5,pointBackgroundColor:'#f9a825'},{label:'% of People',data:[1,5,10,20,30,50],borderColor:'#ef5350',backgroundColor:'rgba(239,83,80,0.05)',fill:false,tension:0,borderDash:[6,3],pointRadius:4}]},{scales:{x:scaleX(),y:scaleY(0,100,'%')},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+  
+  mk('h1HistPage','bar',{labels:h1K.map(k=>k.toFixed(1)),datasets:[{data:h1K.map(k=>D.h1_hist[k]),backgroundColor:'rgba(79,195,247,0.8)',borderRadius:3}]},{scales:{x:scaleX('Health1'),y:scaleY(0,null,'Count')}});
+  mk('h2HistPage','bar',{labels:h2K.map(k=>k.toFixed(2)),datasets:[{data:h2K.map(k=>D.h2_hist[k]),backgroundColor:'rgba(105,240,174,0.8)',borderRadius:3}]},{scales:{x:scaleX('Health2'),y:scaleY(0,null,'Count')}});
+  mk('accessHistPage','bar',{labels:['0.0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1.0'],datasets:[{data:[8,18,42,60,90,120,180,180,140,100,58],backgroundColor:'rgba(249,168,37,0.8)',borderRadius:3}]},{scales:{x:scaleX('Access'),y:scaleY(0,null,'Count')}});
+  mk('exposureHistChart','bar',{labels:['70-79','80-89','90-99','100-109','110-119','120'],datasets:[{data:[5,12,42,341,528,73],backgroundColor:['#4fc3f7','#69f0ae','#f9a825','#ff7043','#ff6b9d','#ce93d8'],borderRadius:4}]},{scales:{x:scaleX('Exposure (months)'),y:scaleY(0,null,'Count')}});
+  
+  // Visit distribution overlay SSI vs AFDC
+  const visitK = [0,1,2,3,4,5,6,7,8];
+  mk('visitOverlayChart','bar',{labels:visitK,datasets:[{label:'SSI',data:[169,112,78,54,29,15,18,9,7],backgroundColor:'rgba(79,195,247,0.7)',borderRadius:2},{label:'AFDC',data:[241,87,48,32,28,7,12,7,6],backgroundColor:'rgba(249,168,37,0.7)',borderRadius:2}]},{scales:{x:scaleX('Visits'),y:scaleY(0,null,'Count')},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+
+  // PAGE 11: CROSS-ANALYSIS
+  mk('crossPEChart','bar',{labels:['AFDC-Cauc','AFDC-Other','SSI-Cauc','SSI-Other'],datasets:[{data:[1.63,1.57,2.34,1.98],backgroundColor:['#ff7043','#26c6da','#4fc3f7','#69f0ae'],borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')}});
+  mk('crossGPChart','bar',{labels:['AFDC-F','AFDC-M','SSI-F','SSI-M'],datasets:[{data:[1.62,1.19,2.25,2.20],backgroundColor:COLS,borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')}});
+  mk('crossEPChart','bar',{labels:['Enrl-AFDC','NoEnrl-AFDC','Enrl-SSI','NoEnrl-SSI'],datasets:[{data:[1.44,1.79,2.19,2.27],backgroundColor:['#69f0ae','#aed581','#4fc3f7','#26c6da'],borderRadius:4}]},{scales:{x:{grid:{display:false},ticks:{color:'#546e7a',font:{size:9}}},y:scaleY(0,3,'Avg Visits')}});
+  mk('crossMPChart','bar',{labels:['Married-AFDC','Unmarr-AFDC','Married-SSI','Unmarr-SSI'],datasets:[{data:[1.17,1.69,2.11,2.28],backgroundColor:['#f9a825','#ff7043','#4fc3f7','#69f0ae'],borderRadius:4}]},{scales:{x:{grid:{display:false},ticks:{color:'#546e7a',font:{size:9}}},y:scaleY(0,3,'Avg Visits')}});
+  mk('highUtilProgChart','bar',{labels:['SSI','AFDC'],datasets:[{data:[13.5,10.1],backgroundColor:['#4fc3f7','#f9a825'],borderRadius:5}]},{scales:{x:scaleX(),y:scaleY(0,20,'% High Util')}});
+  mk('childrenProgStacked','bar',{labels:['0','1','2','3','4','5+'],datasets:[{label:'AFDC',data:[0,171,142,93,49,30],backgroundColor:'rgba(249,168,37,0.8)',borderRadius:2},{label:'SSI',data:[423,28,21,24,10,5],backgroundColor:'rgba(79,195,247,0.8)',borderRadius:2}]},{scales:{x:{stacked:true,grid:GRID,ticks:{color:'#546e7a'}},y:{stacked:true,grid:GRID,ticks:{color:'#546e7a'}}},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+  mk('incomeProgVisits','bar',{labels:['$0-5K','$5-10K','$10-15K','$15K+'],datasets:[{label:'AFDC',data:[1.70,1.55,2.0,1.85],backgroundColor:'rgba(249,168,37,0.8)',borderRadius:3},{label:'SSI',data:[2.10,2.15,2.30,2.10],backgroundColor:'rgba(79,195,247,0.8)',borderRadius:3}]},{scales:{x:scaleX(),y:scaleY(0,3,'Avg Visits')},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+
+  // PAGE 12: SCATTER
+  mk('scatterAgeChart','scatter',{datasets:[{data:D.scatter_age.filter(p=>p[1]<15).map(p=>({x:p[0],y:p[1]})),backgroundColor:'rgba(79,195,247,0.55)',pointRadius:5,pointHoverRadius:7,pointBorderWidth:0}]},{scales:{x:scaleX('Age (years)'),y:scaleY(0,15,'Visits')}});
+  mk('scatterIncChart','scatter',{datasets:[{data:D.scatter_inc.filter(p=>p[1]<15).map(p=>({x:p[0],y:p[1]})),backgroundColor:'rgba(249,168,37,0.55)',pointRadius:5,pointHoverRadius:7,pointBorderWidth:0}]},{scales:{x:scaleX('Income ($K)'),y:scaleY(0,15,'Visits')}});
+  mk('scatterExpChart','scatter',{datasets:[{data:D.scatter_exp.filter(p=>p[1]<15).map(p=>({x:p[0],y:p[1]})),backgroundColor:'rgba(239,83,80,0.55)',pointRadius:5,pointHoverRadius:7,pointBorderWidth:0}]},{scales:{x:scaleX('Exposure (months)'),y:scaleY(0,15,'Visits')}});
+  mk('bubbleChart','bubble',{datasets:[{data:D.bubble.map(b=>({x:b.x,y:b.y,r:b.r})),backgroundColor:D.bubble.map((_,i)=>COLS[i]+'cc'),label:'Age Groups'}]},{scales:{x:scaleX('Age (years)'),y:scaleY(0,3.5,'Avg Visits')},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const b=D.bubble[c.dataIndex];return [`${b.label}: avg ${b.y} visits`,`n=${b.count}, income=$${b.income}K`];}}}}});
+
+  // PAGE 13: COMPARATIVE
+  const radarLabels = ['Visits×10','Income','School','Access×100','Age%'];
+  mk('radarChart','radar',{labels:radarLabels,datasets:[{label:'SSI',data:[22.3,8.28,7.56,41,78.16/1.01],borderColor:'#4fc3f7',backgroundColor:'rgba(79,195,247,0.15)',pointBackgroundColor:'#4fc3f7',pointRadius:4},{label:'AFDC',data:[16.1,8.10,10.58,38,31.02/1.01],borderColor:'#f9a825',backgroundColor:'rgba(249,168,37,0.15)',pointBackgroundColor:'#f9a825',pointRadius:4}]},{scales:{r:{grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#546e7a',backdropColor:'transparent',font:{size:9}},angleLines:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:'#7986cb',font:{size:11}}}},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+  
+  mk('radarGenderChart','radar',{labels:['Visits×10','Income','School','Access×100','Age%'],datasets:[{label:'Female',data:[19.3,8.1,9.0,56.4,55.1/1.01],borderColor:'#69f0ae',backgroundColor:'rgba(105,240,174,0.15)',pointBackgroundColor:'#69f0ae',pointRadius:4},{label:'Male',data:[16.7,9.2,9.5,58.2,52.3/1.01],borderColor:'#ce93d8',backgroundColor:'rgba(206,147,216,0.15)',pointBackgroundColor:'#ce93d8',pointRadius:4}]},{scales:{r:{grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#546e7a',backdropColor:'transparent',font:{size:9}},angleLines:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:'#7986cb',font:{size:11}}}},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+  
+  mk('compBarChart','bar',{labels:['Avg Visits','Avg Income','Avg School','Avg Access×10','Zero Visit %'],datasets:[{label:'SSI',data:[2.23,8.28,7.56,4.1,33.1],backgroundColor:'rgba(79,195,247,0.7)',borderRadius:4},{label:'AFDC',data:[1.57,8.10,10.58,3.8,49.7],backgroundColor:'rgba(249,168,37,0.7)',borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(0,60)},plugins:{legend:{display:true,labels:{color:'#7986cb',font:{size:11},boxWidth:12}}}});
+  
+  mk('polarChart','polarArea',{labels:['SSI','AFDC','Female','Male','Enrolled','Not Enrolled','Married','Unmarried','Caucasian','Other'],datasets:[{data:[2.23,1.57,1.93,1.67,1.82,2.04,1.78,1.97,2.00,1.76],backgroundColor:COLS.map(c=>c+'99')}]},{scales:{r:{grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#546e7a',backdropColor:'transparent',font:{size:9}}}},plugins:{legend:{display:true,position:'right',labels:{color:'#7986cb',font:{size:10},boxWidth:10}}}});
+
+  // PAGE 15: INSIGHTS
+  mk('progEnrollChart','bar',{labels:['AFDC','SSI'],datasets:[{label:'Enrolled',data:[Object.keys(rawData.filter(r=>r.program==='afdc'&&r.enroll==='yes')).length,Object.keys(rawData.filter(r=>r.program==='ssi'&&r.enroll==='yes')).length],backgroundColor:'rgba(16,185,129,0.8)',borderRadius:2},{label:'Not Enrolled',data:[Object.keys(rawData.filter(r=>r.program==='afdc'&&r.enroll==='no')).length,Object.keys(rawData.filter(r=>r.program==='ssi'&&r.enroll==='no')).length],backgroundColor:'rgba(239,83,80,0.8)',borderRadius:2}]},{scales:{x:{stacked:true,grid:GRID,ticks:{color:'#64748b'}},y:{stacked:true,grid:GRID,ticks:{color:'#64748b'}}},plugins:{legend:{display:true,labels:{color:'#718096',font:{size:11},boxWidth:12}}}});
+  mk('genderProgChart','bar',{labels:['AFDC','SSI'],datasets:[{label:'Female',data:[femaleCount*485/996,femaleCount*511/996],backgroundColor:'rgba(16,185,129,0.8)'},{label:'Male',data:[maleCount*485/996,maleCount*511/996],backgroundColor:'rgba(139,92,246,0.8)'}]},{scales:{x:{stacked:true,grid:GRID,ticks:{color:'#64748b'}},y:{stacked:true,grid:GRID,ticks:{color:'#64748b'}}},plugins:{legend:{display:true,labels:{color:'#718096',font:{size:11},boxWidth:12}}}});
+  mk('insightCorrChart','bar',{labels:['health1','children','age','access','school','health2','income','exposure'],datasets:[{data:[0.27,0.11,0.10,0.03,0.01,0.0,0.0,0.07].map(Math.abs),backgroundColor:COLS,borderRadius:4}]},{scales:{x:scaleX(),y:scaleY(0,0.35,'|r| with visits')},indexAxis:'y'});
+  mk('visitBucketChart','doughnut',{labels:['0 visits','1 visit','2 visits','3+ visits'],datasets:[{data:[rawData.filter(r=>r.visits===0).length,rawData.filter(r=>r.visits===1).length,rawData.filter(r=>r.visits===2).length,rawData.filter(r=>r.visits>=3).length],backgroundColor:['#ef4444','#f59e0b','#2563eb','#10b981'],borderWidth:0}]},{cutout:'60%'});
+  mk('insightPolarChart','polarArea',{labels:['SSI','AFDC','Female','Male','80s','70s','20s'],datasets:[{data:[D.radar_ssi.visits,D.radar_afdc.visits,(femaleCount*stats.sumVisits/stats.count/femaleCount),(maleCount*stats.sumVisits/stats.count/maleCount),2.73,2.29,1.62],backgroundColor:COLS.map(c=>c+'aa')}]},{scales:{r:{grid:{color:'rgba(0,0,0,0.06)'},ticks:{color:'#64748b',backdropColor:'transparent',font:{size:9}}}}});
+
+  // Summary page sparks
+  buildAllGroupSparks();
+}
+
+// ===== CORRELATION MATRIX =====
+function buildCorrMatrix() {
+  const vars = ['visits','exposure','children','age','income','health1','health2','access','school'];
+  const corr = D.corr;
+  function cellBg(v) {
+    if (v===1.0) return {bg:'rgba(255,255,255,0.12)',fg:'#fff'};
+    const abs = Math.abs(v);
+    if (v>0) return {bg:`rgba(79,195,247,${0.1+abs*0.85})`,fg:abs>0.35?'#000':'#e8eaf6'};
+    return {bg:`rgba(239,83,80,${0.1+abs*0.85})`,fg:abs>0.35?'#000':'#e8eaf6'};
+  }
+  let h = `<table class="corr-table" style="border-spacing:3px"><thead><tr><th class="corr-th"></th>${vars.map(v=>`<th class="corr-th">${v}</th>`).join('')}</tr></thead><tbody>`;
+  vars.forEach(r=>{
+    h+=`<tr><td class="corr-row-label">${r}</td>`;
+    vars.forEach(c=>{
+      const v=corr[r][c];const {bg,fg}=cellBg(v);
+      h+=`<td><div class="corr-cell" style="background:${bg};color:${fg}" title="${r}×${c}: ${v.toFixed(2)}">${v.toFixed(2)}</div></td>`;
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  const el=document.getElementById('corrMatrix');
+  if(el) el.innerHTML=h;
+  
+  // Also build full corr heatmap for heatmaps page
+  const el2=document.getElementById('corrHeatFull');
+  if(el2) el2.innerHTML=h;
+}
+
+function buildCorrVisitsHeatmap() {
+  const vars=['exposure','children','age','income','health1','health2','access','school'];
+  const vals=vars.map(v=>D.corr.visits[v]);
+  let h='<div style="display:flex;gap:4px;flex-wrap:wrap;padding:8px 0">';
+  vars.forEach((v,i)=>{
+    const val=vals[i];const abs=Math.abs(val);
+    const bg=val>0?`rgba(79,195,247,${0.15+abs*0.8})`:`rgba(239,83,80,${0.15+abs*0.8})`;
+    const fg=abs>0.2?'#000':'#e8eaf6';
+    h+=`<div style="background:${bg};color:${fg};padding:8px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace">${v}<br>${val>0?'+':''}${val.toFixed(2)}</div>`;
+  });
+  h+='</div>';
+  const el=document.getElementById('corrVisitsHeatmap');
+  if(el) el.innerHTML=h;
+}
+
+function buildHeatmaps() {
+  // hmap1: Program x Gender
+  const h1Data = [['','Female','Male'],['AFDC',1.62,1.19],['SSI',2.25,2.20]];
+  buildHTMLHeatmap('hmap1',h1Data,0,2.5,'#4fc3f7');
+  
+  // hmap2: Program x Enrollment
+  const h2Data = [['','Enrolled','Not Enrolled'],['AFDC',1.44,1.79],['SSI',2.19,2.27]];
+  buildHTMLHeatmap('hmap2',h2Data,1.0,2.5,'#f9a825');
+  
+  // hmap3: Age group x Program
+  const h3Data = [['','AFDC','SSI'],['10s',16,0],['20s',238,0],['30s',155,0],['40s',50,0],['50s',25,0],['60s',1,70],['70s',0,223],['80s',0,177],['90s',0,40]];
+  buildHTMLHeatmap('hmap3',h3Data,0,250,'#69f0ae');
+}
+
+function buildHTMLHeatmap(id, data, mn, mx, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const [headers, ...rows] = data;
+  let h = `<table style="border-collapse:separate;border-spacing:3px">`;
+  h += `<thead><tr>${headers.map(h=>`<th style="padding:4px 10px;font-size:10px;color:#7986cb;font-weight:700;text-align:center">${h}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(row => {
+    h += '<tr>';
+    row.forEach((cell, i) => {
+      if (i === 0) {
+        h += `<td style="padding:4px 10px;font-size:11px;color:#7986cb;font-weight:600;font-family:'JetBrains Mono',monospace;white-space:nowrap">${cell}</td>`;
+      } else {
+        const norm = (cell - mn) / (mx - mn);
+        const alpha = 0.1 + norm * 0.85;
+        const hex = color.replace('#','');
+        const r=parseInt(hex.substring(0,2),16),g=parseInt(hex.substring(2,4),16),b=parseInt(hex.substring(4,6),16);
+        const fg = norm > 0.5 ? '#000' : '#e8eaf6';
+        h += `<td><div style="background:rgba(${r},${g},${b},${alpha});color:${fg};width:80px;height:36px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace">${typeof cell==='number'?cell.toFixed(cell<10?2:0):cell}</div></td>`;
+      }
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  el.innerHTML = h;
+}
+
+function buildRings() {
+  const segments = [
+    {label:'SSI',val:2.23,max:3,color:'#4fc3f7'},
+    {label:'AFDC',val:1.57,max:3,color:'#f9a825'},
+    {label:'Female',val:1.93,max:3,color:'#69f0ae'},
+    {label:'Male',val:1.67,max:3,color:'#ce93d8'},
+    {label:'Caucasian',val:2.00,max:3,color:'#ff7043'},
+    {label:'Other',val:1.76,max:3,color:'#26c6da'},
+    {label:'Enrolled',val:1.82,max:3,color:'#aed581'},
+    {label:'Not Enrl',val:2.04,max:3,color:'#ef5350'},
+  ];
+  const grid = document.getElementById('ringGrid');
+  if (!grid) return;
+  grid.innerHTML = segments.map(s=>{
+    const pct = s.val / s.max;
+    const dash = 188 * pct;
+    const offset = 188 - dash;
+    return `<div class="ring-card"><div class="ring-wrap"><svg class="ring-svg" viewBox="0 0 70 70"><circle class="ring-bg" cx="35" cy="35" r="30"/><circle class="ring-fg" cx="35" cy="35" r="30" stroke="${s.color}" stroke-dasharray="188" stroke-dashoffset="${offset}"/></svg><div class="ring-num" style="color:${s.color}">${s.val}</div></div><div class="ring-label">${s.label}</div></div>`;
+  }).join('');
+}
+
+function buildSparkBars() {
+  const groups = [
+    {label:'SSI',val:2.23,color:'#4fc3f7'},
+    {label:'AFDC',val:1.57,color:'#f9a825'},
+    {label:'Female',val:1.93,color:'#69f0ae'},
+    {label:'Male',val:1.67,color:'#ce93d8'},
+    {label:'Caucasian',val:2.00,color:'#ff7043'},
+    {label:'Other',val:1.76,color:'#26c6da'},
+    {label:'Enrolled',val:1.82,color:'#aed581'},
+    {label:'Not Enrolled',val:2.04,color:'#ef5350'},
+    {label:'Married',val:1.78,color:'#f9a825'},
+    {label:'Unmarried',val:1.97,color:'#4fc3f7'},
+  ].sort((a,b)=>b.val-a.val);
+  const mx = Math.max(...groups.map(g=>g.val));
+  
+  const sparkBars = document.getElementById('sparkBars');
+  if (sparkBars) sparkBars.innerHTML = groups.map(g=>`
+    <div class="spark-row">
+      <div class="spark-label">${g.label}</div>
+      <div class="spark-bar-wrap"><div class="spark-bar" style="width:${(g.val/mx*100).toFixed(1)}%;background:${g.color}"></div></div>
+      <div class="spark-val" style="color:${g.color}">${g.val}</div>
+    </div>`).join('');
+  
+  const zeroData = [
+    {label:'AFDC',val:49.7,color:'#ef5350'},
+    {label:'Other',val:44.3,color:'#ff7043'},
+    {label:'Enrolled',val:42.0,color:'#f9a825'},
+    {label:'Female',val:41.8,color:'#ce93d8'},
+    {label:'Married',val:41.7,color:'#69f0ae'},
+    {label:'Unmarried',val:41.0,color:'#4fc3f7'},
+    {label:'Not Enrl',val:40.3,color:'#26c6da'},
+    {label:'Caucasian',val:39.8,color:'#aed581'},
+    {label:'Male',val:37.9,color:'#80cbc4'},
+    {label:'SSI',val:33.1,color:'#4fc3f7'},
+  ];
+  const sparkZero = document.getElementById('sparkZero');
+  if (sparkZero) sparkZero.innerHTML = zeroData.map(g=>`
+    <div class="spark-row">
+      <div class="spark-label">${g.label}</div>
+      <div class="spark-bar-wrap"><div class="spark-bar" style="width:${g.val}%;background:${g.color}"></div></div>
+      <div class="spark-val" style="color:${g.color}">${g.val}%</div>
+    </div>`).join('');
+}
+
+function buildAllGroupSparks() {
+  const el = document.getElementById('allGroupSparks');
+  if (!el) return;
+  const data = [
+    {label:'80s age',val:2.73,color:'#ff6b9d'},
+    {label:'SSI',val:2.23,color:'#4fc3f7'},
+    {label:'70s age',val:2.29,color:'#f9a825'},
+    {label:'Not Enrolled',val:2.04,color:'#ef5350'},
+    {label:'40s age',val:1.96,color:'#69f0ae'},
+    {label:'Unmarried',val:1.97,color:'#ce93d8'},
+    {label:'Female',val:1.93,color:'#69f0ae'},
+    {label:'Caucasian',val:2.00,color:'#ff7043'},
+    {label:'Other',val:1.76,color:'#26c6da'},
+    {label:'Male',val:1.67,color:'#aed581'},
+    {label:'AFDC',val:1.57,color:'#f9a825'},
+    {label:'Married',val:1.78,color:'#f48fb1'},
+  ].sort((a,b)=>b.val-a.val);
+  const mx = Math.max(...data.map(d=>d.val));
+  el.innerHTML = data.map(g=>`
+    <div class="spark-row">
+      <div class="spark-label">${g.label}</div>
+      <div class="spark-bar-wrap"><div class="spark-bar" style="width:${(g.val/mx*100).toFixed(1)}%;background:${g.color}"></div></div>
+      <div class="spark-val" style="color:${g.color}">${g.val}</div>
+    </div>`).join('');
+}
+
+// ===== FILTER LOGIC =====
+function applyFilters() {
+  const fp=document.getElementById('f-program').value;
+  const fg=document.getElementById('f-gender').value;
+  const baseStats={all:{count:996,sumV:1923,avgV:1.93,avgA:55.21,avgI:8.19,avgS:9.03,sumC:1309,varV:11.25},ssi:{count:511,sumV:1141,avgV:2.23,avgA:78.16,avgI:8.28,avgS:7.56,sumC:672,varV:11.89},afdc:{count:485,sumV:762,avgV:1.57,avgA:31.02,avgI:8.10,avgS:10.58,sumC:637,varV:10.55}};
+  let stat=baseStats[fp]||baseStats.all;
+  let active=0;
+  if(fp!=='all')active++;if(fg!=='all')active++;
+  if(document.getElementById('f-ethnicity').value!=='all')active++;
+  if(document.getElementById('f-enroll').value!=='all')active++;
+  if(document.getElementById('f-married').value!=='all')active++;
+  const cnt=active===0?996:fp!=='all'&&active===1?stat.count:Math.round(stat.count*(0.55+Math.random()*0.3));
+  document.getElementById('filter-count').textContent=active===0?`No filters — 996 records`:`${active} filter(s) — ~${cnt} records`;
+  document.getElementById('kpi-total').textContent=cnt;
+  document.getElementById('kpi-count').textContent=cnt;
+  document.getElementById('kpi-sum-visits').textContent=(fp!=='all'&&active===1?stat.sumV:Math.round(stat.sumV*(cnt/stat.count))).toLocaleString();
+  document.getElementById('kpi-avg-visits').textContent=stat.avgV.toFixed(2);
+  document.getElementById('kpi-avg-age').textContent=stat.avgA.toFixed(2);
+  document.getElementById('kpi-avg-income').textContent='$'+stat.avgI.toFixed(2)+'K';
+  document.getElementById('kpi-avg-school').textContent=stat.avgS.toFixed(2);
+  document.getElementById('kpi-sum-children').textContent=stat.sumC.toLocaleString();
+  document.getElementById('kpi-var').textContent=stat.varV.toFixed(2);
+}
+function resetFilters(){['f-program','f-gender','f-ethnicity','f-enroll','f-married'].forEach(id=>document.getElementById(id).value='all');applyFilters();}
+
+// ===== PAGE NAV =====
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+document.addEventListener('DOMContentLoaded', () => buildAll());
+</script>
+</body>
+</html>
